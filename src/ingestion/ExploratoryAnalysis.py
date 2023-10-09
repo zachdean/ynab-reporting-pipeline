@@ -1,9 +1,14 @@
 # Databricks notebook source
 # DBTITLE 1,Mount Storage
-import ynab_helpers
+STORAGE_ENDPOINT_KEY = "storageHost"
+CONTAINER = "ynab"
+KEY_VAULT_SCOPE = "azureKeyVault"
+STORAGE_KEY = "storageKey"
 
-ynab_helpers.set_up_storage_account(spark, dbutils)
-storage_host = ynab_helpers.get_storage_account_host(dbutils)
+spark.conf.set("fs.azure.account.key." + get_storage_account_host(dbutils),
+                dbutils.secrets.get(scope=KEY_VAULT_SCOPE, key=STORAGE_KEY))
+
+storage_host = dbutils.secrets.get(scope=KEY_VAULT_SCOPE, key=STORAGE_ENDPOINT_KEY)
 
 # COMMAND ----------
 
@@ -12,7 +17,7 @@ import json
 from pyspark.sql.functions import unix_timestamp,to_date
 from pyspark.sql.types import *
 
-accounts_path = f"abfss://{ynab_helpers.CONTAINER}@{storage_host}/raw/accounts.json"
+accounts_path = f"abfss://{CONTAINER}@{storage_host}/raw/accounts.json"
 
 accounts_json_string = dbutils.fs.head(accounts_path)
 
@@ -53,7 +58,7 @@ from pyspark.sql.functions import unix_timestamp, to_date, explode, current_cata
 from pyspark.sql.types import *
 
 
-transactions_path = f"abfss://{ynab_helpers.CONTAINER}@{storage_host}/raw/transactions.json"
+transactions_path = f"abfss://{CONTAINER}@{storage_host}/raw/transactions.json"
 
 # Define the schema of the dataframe
 schema = StructType([
@@ -180,7 +185,7 @@ import json
 from pyspark.sql.functions import unix_timestamp,to_date
 from pyspark.sql.types import *
 
-months_root_path = f"abfss://{ynab_helpers.CONTAINER}@{storage_host}/raw/month"
+months_root_path = f"abfss://{CONTAINER}@{storage_host}/raw/month"
 
 # list budget months
 display(dbutils.fs.ls(months_root_path))

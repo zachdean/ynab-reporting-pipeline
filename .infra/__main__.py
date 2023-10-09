@@ -1,7 +1,5 @@
 import pulumi
-from pulumi_azure_native import authorization, resources, storage, keyvault, databricks
-
-DATABRICKS_PRINCIPLE_ID = "be99d3e2-db24-4c41-b1bc-5c9d6ee14815"
+from pulumi_azure_native import authorization, resources, storage, keyvault, web
 
  # Create an Azure Resource Group
 client_config = authorization.get_client_config()
@@ -29,13 +27,6 @@ account_keys = pulumi.Output.all(storage_account.name, resource_group.name).appl
 primary_key = account_keys.apply(
     lambda account_keys: account_keys.keys[0].value)
 
-# Create a DataBricks Workspace
-workspace = databricks.Workspace('YnabPipeline',
-                                      resource_group_name=resource_group.name,
-                                      location=resource_group.location,
-                                      managed_resource_group_id=f'/subscriptions/{client_config.subscription_id}/resourceGroups/Managed_Databricks',
-                                      sku=databricks.SkuArgs(name="standard"))
-
 # Create an Azure Key Vault
 key_vault = keyvault.Vault('kv',
                                 resource_group_name=resource_group.name,
@@ -53,14 +44,16 @@ key_vault = keyvault.Vault('kv',
                                                 certificates= ["get", "list", "delete", "create", "import", "update", "managecontacts", "getissuers", "listissuers", "setissuers", "deleteissuers", "manageissuers", "recover", "backup", "restore", "manageissuers", "setissuers", "deleteissuers"]
                                             ),
                                             tenant_id=client_config.tenant_id
-                                        ),
-                                        keyvault.AccessPolicyEntryArgs(
-                                            object_id=DATABRICKS_PRINCIPLE_ID,
-                                            permissions=keyvault.PermissionsArgs(
-                                                secrets= ["get", "list"],
-                                            ),
-                                            tenant_id=client_config.tenant_id
                                         )]))
+
+app_service_plan = web.AppServicePlan("appServicePlan",
+                                       resource_group_name=resource_group.name,
+                                       location=storage_account.location,
+                                       kind="Linux", 
+                                       reserved=True,
+                                       sku=web.SkuDescriptionArgs(
+                                           tier="Standard",
+                                           name="S1"))
 
 # Create a secret in Azure Key Vault for the storage account key
 storage_key_secret = keyvault.Secret('storageKey',
@@ -81,4 +74,4 @@ pulumi.export('StorageAccountId', storage_account.id)
 pulumi.export('StorageAccountHost', storage_host)
 pulumi.export('VaultId', key_vault.id)
 pulumi.export('VaultUrl', key_vault.name.apply(lambda v: f"https://{v}.vault.azure.net/"))
-pulumi.export('WorkspaceId', workspace.id)
+pulumi.export('AppServicePlanName', app_service_plan.name.apply(lambda v: v))
