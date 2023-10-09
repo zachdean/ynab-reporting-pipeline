@@ -2,8 +2,9 @@
 import ynab_helpers
 
 ynab_helpers.set_up_storage_account(spark, dbutils)
+storage_host = ynab_helpers.get_storage_account_host(dbutils)
 
-destination_base_dir = f"abfss://{ynab_helpers.CONTAINER}@{ynab_helpers.STORAGE_ENDPOINT}/raw/month/"
+destination_base_dir = f"abfss://{ynab_helpers.CONTAINER}@{storage_host}/raw/month/"
 
 # COMMAND ----------
 

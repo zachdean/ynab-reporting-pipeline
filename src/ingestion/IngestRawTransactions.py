@@ -2,10 +2,11 @@
 import ynab_helpers
 
 ynab_helpers.set_up_storage_account(spark, dbutils)
+storage_host = ynab_helpers.get_storage_account_host(dbutils)
 
 raw_filename="transactions.json"
 YNAB_ENDPOINT = "transactions"
-destination_path = f"abfss://{ynab_helpers.CONTAINER}@{ynab_helpers.STORAGE_ENDPOINT}/raw/{raw_filename}"
+destination_path = f"abfss://{ynab_helpers.CONTAINER}@{storage_host}/raw/{raw_filename}"
 
 # COMMAND ----------
 

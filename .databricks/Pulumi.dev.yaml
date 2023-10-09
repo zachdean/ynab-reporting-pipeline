@@ -1,0 +1,6 @@
+config:
+  azure-native:location: southcentralus
+  databricks:host: https://adb-8955651316334985.5.azuredatabricks.net/
+  databricks:token:
+    secure: AAABADFqZvhqd/mixaLAboAfKxfEfzd8Km1D/lecjvLR+RRmUkLa9mfpb2aKaWqUFKJTGb5FS/l/gmkvA3uaa+NRc1Q=
+  ynab-databricks:node-type: Standard_DS3_v2
