@@ -1,2 +1,6 @@
 config:
   azure-native:location: southcentralus
+  ynab-data-pipeline:ynabBudgetId:
+    secure: AAABACuVQsMfOnAVojihom3CjhzxoyQx8W1TZTue3wCd2dMKlQlIfsm4kzf9OWwQ4chC0QFbM3+tgM0uyNX1DPBCAqc=
+  ynab-data-pipeline:ynabUserToken:
+    secure: AAABAGcuxh7JOUvAhX9moQe5XVDoMS/mFI0J7ktlQKXZaPXF3iquWbQAme6TCoFjhyP9b4oPCsRz5OPJ/x4y81u3DEFYOUQWA4rChJ3zeXU/JKy08BaJfeDFR6do8ky4

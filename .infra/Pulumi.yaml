@@ -1,9 +1,17 @@
 name: ynab-data-pipeline
 runtime: python
 description: Infrastructre for a YNAB data pipeline
-# config:
-#   azure-native:location: 
-#     type: string
-#     description: Azure resource 
-#     default: southcentralus
-#     secret: false
+config:
+  ynabBaseEndpoint:
+    type: string
+    description: YNAB Api base url
+    default: https://api.ynab.com/v1/
+    secret: false
+  ynabBudgetId:
+    type: string
+    description: The YNAB Budget id to process
+    secret: true
+  ynabUserToken:
+    type: string
+    description: The YNAB User token
+    secret: true
