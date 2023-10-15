@@ -7,6 +7,25 @@ import ingestion.ingest as ingest
 app = df.DFApp()
 connect_str = os.getenv('AzureWebJobsStorage')
 
+## stubbed data
+@app.route('mocks/budgets/{budgetId}/transactions', methods=['GET'])
+def transaction_mock_http(req: func.HttpRequest) -> func.HttpResponse:
+    filename = 'static/transactions.json'
+    with open(filename, 'rb') as f:
+        return func.HttpResponse(f.read(), mimetype='application/json')
+
+@app.route('mocks/budgets/{budgetId}/accounts', methods=['GET'])
+def accounts_mock_http(req: func.HttpRequest) -> func.HttpResponse:
+    filename = 'static/accounts.json'
+    with open(filename, 'rb') as f:
+        return func.HttpResponse(f.read(), mimetype='application/json')
+
+@app.route('mocks/budgets/{budgetId}/months/{month}', methods=['GET'])
+def month_mock_http(req: func.HttpRequest) -> func.HttpResponse:
+    filename = 'static/month.json'
+    with open(filename, 'rb') as f:
+        return func.HttpResponse(f.read(), mimetype='application/json')
+
 @app.schedule(schedule="0 42 2 * * *", 
               arg_name="timer", 
               # run_on_startup=True, # uncomment for local dev

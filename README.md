@@ -14,6 +14,7 @@ In order for this project to work, you must follow the steps below:
 1. Create a [Azure Subscription](https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription)
 1. Install the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
 1. Install the [Azure Bicep](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/install)
+1. Install [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=windows%2Cisolated-process%2Cnode-v4%2Cpython-v2%2Chttp-trigger%2Ccontainer-apps&pivots=programming-language-powershell#install-the-azure-functions-core-tools)
 1. For local development, create local settings file `src/local.settings.json`, it should have the following at a minimum
 
 ``` json
@@ -32,16 +33,16 @@ In order for this project to work, you must follow the steps below:
 
 ## Deploy Infrastructure
 
-* create `local.parameters.json` based on `sample.parameters.json` adding the following keys. This step can omitted if you want to enter the params during the deployment
-  * `ynabUserToken`
-  * `ynabBudgetId`
-* open this directory in a terminal
-* run 
+- create `local.parameters.json` based on `sample.parameters.json` adding the following keys. This step can omitted if you want to enter the params during the deployment
+  - `ynabUserToken`
+  - `ynabBudgetId`
+- open this directory in a terminal
+- run 
 ``` PowerShell
 az deployment sub create --location southcentralus --template-file .\ynab-data-pipeline.bicep --parameters .\local.parameters.json
 ```
-  * Note: if you omit `--parameters` then you will be prompted to enter required parameters. The command would be 
-  ``` PowerShell
+  - Note: if you omit `--parameters` then you will be prompted to enter required parameters. The command would be 
+``` PowerShell
 az deployment sub create --location southcentralus --template-file .\ynab-data-pipeline.bicep
 ```
 
@@ -59,6 +60,8 @@ The YNAB Api token must be fetched from the YNAB application (see [quick start](
 After the values are collected, they need to be stored in the create Azure Key Vault. Deploy the infrastructure to get the values properly in KeyVault and app settings.
 
 ## Ingestion
+
+Note: to use mocked data, change the function application settings `YNAB_BASE_ENDPOINT` to `https://<functionName>.azurewebsites.net/api/mocks/`. This load static files from the function itself that should demonstrate the pipeline
 
 ### Source
 
