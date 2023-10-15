@@ -13,9 +13,8 @@ In order for this project to work, you must follow the steps below:
 
 1. Create a [Azure Subscription](https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription)
 1. Install the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
-1. Create a [Pulumi Account](https://www.pulumi.com/docs/pulumi-cloud/accounts/)
-1. Install the [Pulumi CLI](https://www.pulumi.com/docs/install/)
-1. create local settings file `src/local.settings.json`, it should have the following at a minimum
+1. Install the [Azure Bicep](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/install)
+1. For local development, create local settings file `src/local.settings.json`, it should have the following at a minimum
 
 ``` json
 {
@@ -31,31 +30,38 @@ In order for this project to work, you must follow the steps below:
 }
 ```
 
-
 ## Deploy Infrastructure
 
-**IoC is currently in development!, run locally or manually deploy the app to cloud**
-After Pulumi is configured on your machine, you can deploy infrastructure by doing the following
+* create `local.parameters.json` based on `sample.parameters.json` adding the following keys. This step can omitted if you want to enter the params during the deployment
+  * `ynabUserToken`
+  * `ynabBudgetId`
+* open this directory in a terminal
+* run 
+``` PowerShell
+az deployment sub create --location southcentralus --template-file .\ynab-data-pipeline.bicep --parameters .\local.parameters.json
+```
+  * Note: if you omit `--parameters` then you will be prompted to enter required parameters. The command would be 
+  ``` PowerShell
+az deployment sub create --location southcentralus --template-file .\ynab-data-pipeline.bicep
+```
 
-1. Checkout repo
-1. Open `./.infra` in a terminal
-1. run `pulumi up -s dev` to create the stack
+## Deploy Function
+
+`# Deploy the function app code
+run `./script/deploy.ps1`
+
+Note: you may need to unblock powershell script execution on your machine, you can do it by running the following command `Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser`
 
 ## YNAB Api User Token
+
 The YNAB Api token must be fetched from the YNAB application (see [quick start](https://api.ynab.com/)). After the token is fetched it must be added to the create Azure Key Vault. In addition, you must get the budget to the run the pipeline from the YNAB application url (`https://app.ynab.com/{Take this value}/budget/202310`, the value should like this `f2b1c1f9-5d5d-4e2d-8c6e-9c2b7d5c4d6e`, the full url would be `https://app.ynab.com/f2b1c1f9-5d5d-4e2d-8c6e-9c2b7d5c4d6e/budget/202310`).
 
-After the values are collected, they need to be stored in the create Azure Key Vault.
-
-Secrets to enter into Azure Key Vault (see [quick start](https://learn.microsoft.com/en-us/azure/key-vault/secrets/quick-create-portal#add-a-secret-to-key-vault))
-| Key | Value |
-| --- | --- |
-| YnabUserToken | The retrieved user token |
-| YnabBudgetId | The Budget ID to run the pipeline on |
-
+After the values are collected, they need to be stored in the create Azure Key Vault. Deploy the infrastructure to get the values properly in KeyVault and app settings.
 
 ## Ingestion
 
 ### Source
+
 the [YNAB API](https://api.ynab.com/v1) provides all of the necessary endpoints to get data from. Below are the specific endpoints currently used.
 
 #### Get Transactions

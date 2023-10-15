@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "resourceGroupName": {
+      "value": "YnabDataPipeline-rg"
+    },
+    "resourceGroupLocation": {
+      "value": "southcentralus"
+    },
+    "ynabBasUrl": {
+      "value": "https://api.ynab.com/v1/"
+    },
+    "ynabUserToken": {
+      "value": "<YNAB User Token>"
+    },
+    "ynabBudgetId": {
+      "value": "<YNAB Budget Id>"
+    }
+  }
+}
