@@ -1,9 +1,0 @@
-name: ynab-databricks
-runtime: python
-description: The Databricks configuration for the YNAB Data Pipeline
-# config:
-#   azure-native:location: 
-#     type: string
-#     description: Azure resource 
-#     default: southcentralus
-#     secret: false

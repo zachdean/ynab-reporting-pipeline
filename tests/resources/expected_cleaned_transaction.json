@@ -1,0 +1,18 @@
+{
+  "id": "793b03fa-c1e7-47fe-a314-2b555b98692e",
+  "date": "2021-01-10",
+  "amount": -38.41,
+  "memo": "",
+  "cleared": "reconciled",
+  "approved": true,
+  "flag_color": null,
+  "account_id": "3018a681-b240-4409-a413-cd2bfe6d0232",
+  "account_name": "Checking",
+  "payee_id": "a4c31dfc-4439-45e7-bb70-0c7958ff300c",
+  "payee_name": "Walmart",
+  "category_id": "f793ec38-d669-4013-a4ba-dd4e26413288",
+  "category_name": "🛒 Groceries",
+  "transfer_account_id": null,
+  "transfer_transaction_id": null,
+  "debt_transaction_type": null
+}
