@@ -1,5 +1,5 @@
 from pulumi_azure_native import authorization, resources, storage, keyvault, web
-import pulumi_azure as azure
+# import pulumi_azure as azure
 import pulumi
 import helpers
 
@@ -34,7 +34,7 @@ deploy_container = storage.BlobContainer('zip_container',
 blob = storage.Blob("zip",
     resource_group_name=resource_group.name,
     account_name=storage_account.name,
-    container_name="$web",
+    container_name="zip",
     blob_name="functionapp.zip",
     type="Block",
     source=pulumi.FileArchive("./build"))
@@ -122,17 +122,18 @@ app = web.WebApp("fa",
         type=web.ManagedServiceIdentityType.SYSTEM_ASSIGNED,
     ))
 
+# Azure Classic does not work for some reason
 # create access policy
-access_policy = azure.keyvault.AccessPolicy("accessPolicy",
-    key_vault_id=key_vault.id,
-    tenant_id=app.identity.tenant_id,
-    object_id=app.identity.principal_id,
-    key_permissions=[
-        "get"
-    ],
-    secret_permissions=[
-        "get"
-    ])
+# access_policy = azure.keyvault.AccessPolicy("accessPolicy",
+#     key_vault_id=key_vault.id,
+#     tenant_id=app.identity.tenant_id,
+#     object_id=app.identity.principal_id,
+#     key_permissions=[
+#         "get"
+#     ],
+#     secret_permissions=[
+#         "get"
+#     ])
 
 # Export the Stack outputs
 pulumi.export('ResourceGroupId', resource_group.id)
