@@ -1,0 +1,70 @@
+[
+  {
+    "id": "cc153aec-4a0c-4c5d-8745-1afa6c661c6f",
+    "name": "Checking",
+    "type": "checking",
+    "on_budget": true,
+    "closed": false,
+    "note": null,
+    "balance": 16164050,
+    "cleared_balance": 0,
+    "uncleared_balance": 0,
+    "transfer_payee_id": "fa35e521-1991-47d6-80d3-71e5dbfc0e6f",
+    "direct_import_linked": true,
+    "direct_import_in_error": false,
+    "last_reconciled_at": "2023-09-23T05:38:58.514Z",
+    "debt_original_balance": null,
+    "debt_interest_rates": {},
+    "debt_minimum_payments": {},
+    "debt_escrow_amounts": {},
+    "deleted": false
+  },
+  {
+    "id": "6feb167b-6819-4c33-922a-6aa9c884df05",
+    "name": "Savings",
+    "type": "savings",
+    "on_budget": true,
+    "closed": false,
+    "note": null,
+    "balance": 37843270,
+    "cleared_balance": 0,
+    "uncleared_balance": 0,
+    "transfer_payee_id": "0ff656ba-873a-4048-b4ce-d42a11aaa5d0",
+    "direct_import_linked": true,
+    "direct_import_in_error": false,
+    "last_reconciled_at": "2023-08-30T09:46:35.054Z",
+    "debt_original_balance": null,
+    "debt_interest_rates": {},
+    "debt_minimum_payments": {},
+    "debt_escrow_amounts": {},
+    "deleted": false
+  },
+  {
+    "id": "689958e1-499d-412e-b8de-6ecd3cc007d4",
+    "name": "Mortgage",
+    "type": "mortgage",
+    "on_budget": false,
+    "closed": false,
+    "note": null,
+    "balance": -5031180,
+    "cleared_balance": 0,
+    "uncleared_balance": 0,
+    "transfer_payee_id": "c3ac28a3-d0b0-4a9c-870a-1347f02e1d55",
+    "direct_import_linked": false,
+    "direct_import_in_error": false,
+    "last_reconciled_at": "2023-09-17T16:30:36.703Z",
+    "debt_original_balance": -10000000,
+    "debt_interest_rates": {
+      "2023-06-01": 5000
+    },
+    "debt_minimum_payments": {
+      "2023-06-01": 1300000
+    },
+    "debt_escrow_amounts": {
+      "2023-06-01": 200000,
+      "2023-08-01": 250000,
+      "2023-09-01": 200000
+    },
+    "deleted": false
+  }
+]
