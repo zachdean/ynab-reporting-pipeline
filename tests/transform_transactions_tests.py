@@ -55,7 +55,7 @@ class TransactionsTestCase(unittest.TestCase):
 
 class MortgageTransactionsTestCase(unittest.TestCase):
 
-    def test_given_accounts_when_transaction_cleaned_then_mortgate_payments_added(self):
+    def test_given_accounts_when_transaction_cleaned_then_mortgage_payments_added(self):
         # arrange
         with open(os.path.join(current_file_path, 'resources/mortgage_transactions.json'), 'r', encoding='utf-8') as f:
             transactions = json.load(f)

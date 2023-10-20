@@ -1,9 +1,41 @@
 from typing import Generator, Iterable
-from azure.storage.blob import BlobServiceClient, ContentSettings
+from azure.storage.blob import BlobServiceClient
 import logging
 import json
 import pandas as pd
 import uuid
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+
+def transform_transactions(connect_str: str) -> int:
+    """ Transforms transactions from the ynab api and saves to blob storage
+
+          :param str conn_str:
+              A connection string to an Azure Storage account.
+    """
+
+    # fetch raw transaction json
+    raw_transactions = _download_blob(
+        connect_str, "bronze/transactions.json")["data"]["transactions"]
+    accounts = _download_blob(
+        connect_str, "bronze/accounts.json")["data"]["accounts"]
+
+    # transform transaction json
+    transactions_df = pd.DataFrame(
+        _transform_transactions(raw_transactions, accounts))
+
+    # save transformed transaction as parquet
+    # Convert the DataFrame to a PyArrow table
+    table = pa.Table.from_pandas(transactions_df)
+
+    # Write the table to a buffer as a Parquet file
+    buffer = pa.BufferOutputStream()
+    pq.write_table(table, buffer)
+    parquet_bytes = buffer.getvalue().to_pybytes()
+
+    blob_name = "silver/transactions.snappy.parquet"
+    return _upload_blob(connect_str, blob_name, parquet_bytes)
 
 
 def _download_blob(connect_str: str, blob_name: str,) -> dict:
@@ -15,7 +47,7 @@ def _download_blob(connect_str: str, blob_name: str,) -> dict:
         container="ynab", blob=blob_name)
 
     # Download the blob data
-    blob_data = blob_client.download_blob().read_all()
+    blob_data = blob_client.download_blob().readall()
 
     # Parse the blob data as a JSON string
     json_data = json.loads(blob_data)
@@ -23,19 +55,27 @@ def _download_blob(connect_str: str, blob_name: str,) -> dict:
     return json_data
 
 
-def _upload_blob(connect_str: str, blob_name: str, raw_json: str) -> int:
+def _upload_blob(connect_str: str, blob_name: str, data: bytes) -> int:
     # Create the BlobServiceClient object which will be used to create a container client
     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
     blob_client = blob_service_client.get_blob_client(
         container="ynab", blob=blob_name)
-    blob_client.upload_blob(raw_json, overwrite=True, timeout=60,
-                            content_settings=ContentSettings(content_type="application/json"))
+    blob_client.upload_blob(data, overwrite=True)
+    byte_count = len(data)
     logging.info(f"uploaded blob `{blob_name}` with {byte_count} bytes")
     return byte_count
 
 
-def _transform_transactions(raw_json_obj: dict) -> dict:
-    return raw_json_obj
+def _transform_transactions(transactions: list[dict], accounts: list[dict]) -> Iterable[dict]:
+
+    transactions = _add_mortgage_payments(transactions, accounts)
+
+    clean_transactions = []
+    for transaction in transactions:
+        for subTransaction in _unnest_subtransactions(transaction):
+            clean_transactions.append(_clean_transaction(subTransaction))
+
+    return clean_transactions
 
 
 def _unnest_subtransactions(transaction: dict) -> Generator[dict, None, None]:
@@ -82,7 +122,7 @@ def _clean_transaction(transaction: dict) -> dict:
         # there is issues with converting to a decimal at this point, so we drop the extra zero
         # and convert to decimal in a later step. Future work allow for the decimal floating point
         # to be dynamically determined from the /budgets/{budgetId}/settings endpoint
-        "amount": transaction["amount"] / 1000,
+        "amount": round(transaction["amount"] / 1000, 2),
         "memo": transaction["memo"],
         "cleared": transaction["cleared"],
         "approved": transaction["approved"],
@@ -171,7 +211,8 @@ def _create_interest_transaction(row: pd.Series, runningTotal: float, account: d
         "category_name": None,
         "transfer_account_id": None,
         "transfer_transaction_id": None,
-        "debt_transaction_type": "interest"
+        "debt_transaction_type": "interest",
+        "subtransactions": []
     }
 
 
@@ -194,7 +235,8 @@ def _create_escrow_transaction(row: pd.Series, account: dict) -> dict:
         "category_name": None,
         "transfer_account_id": None,
         "transfer_transaction_id": None,
-        "debt_transaction_type": "escrow"
+        "debt_transaction_type": "escrow",
+        "subtransactions": []
     }
 
 
@@ -208,22 +250,3 @@ def _fetch_value_from_date(json_obj: dict, date: pd.Timestamp) -> str:
             return value
 
     return sorted_items[0][1]
-
-
-def transform_transactions(connect_str: str) -> int:
-    """ Transforms transactions from the ynab api and saves to blob storage
-
-          :param str conn_str:
-              A connection string to an Azure Storage account.
-    """
-
-    # fetch raw transaction json
-    raw_json_obj = _download_blob(connect_str, "raw/transactions.json")
-
-    # transform transaction json
-    transformed_json_obj = _transform_transactions(raw_json_obj)
-
-    # save transformed transaction json
-    transformed_json = json.dumps(transformed_json_obj)
-    blob_name = "transformed/transactions.json"
-    return _upload_blob(connect_str, blob_name, transformed_json)

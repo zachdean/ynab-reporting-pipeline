@@ -46,7 +46,7 @@ def load_transactions(connect_str: str) -> int:
   raw_json_obj = _fetch_raw_json("transactions")
   raw_json = json.dumps(raw_json_obj)
 
-  blob_name = "raw/transactions.json"
+  blob_name = "bronze/transactions.json"
   return _upload_blob(connect_str, blob_name, raw_json)
 
 
@@ -61,7 +61,7 @@ def load_accounts(connect_str: str) -> int:
   raw_json_obj = _fetch_raw_json("accounts")
   raw_json = json.dumps(raw_json_obj)
 
-  blob_name = "raw/accounts.json"
+  blob_name = "bronze/accounts.json"
 
   return _upload_blob(connect_str, blob_name, raw_json)
 
@@ -83,7 +83,7 @@ def load_current_budget_month(connect_str: str) -> int:
   raw_json_obj = _fetch_raw_json(route)
   raw_json = json.dumps(raw_json_obj)
 
-  blob_name = f"raw/month/{first_day_of_month}/{current_date_str}.json"
+  blob_name = f"bronze/month/{first_day_of_month}/{current_date_str}.json"
   return _upload_blob(connect_str, blob_name, raw_json)
 
 
@@ -109,5 +109,5 @@ def load_previous_budget_month(connect_str: str) -> int:
   raw_json_obj = _fetch_raw_json(route)
   raw_json = json.dumps(raw_json_obj)
 
-  blob_name = f"raw/month/{first_day_of_month}/{current_date_str}.json"
+  blob_name = f"bronze/month/{first_day_of_month}/{current_date_str}.json"
   return _upload_blob(connect_str, blob_name, raw_json)
