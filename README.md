@@ -59,15 +59,15 @@ The YNAB Api token must be fetched from the YNAB application (see [quick start](
 
 After the values are collected, they need to be stored in the create Azure Key Vault. Deploy the infrastructure to get the values properly in KeyVault and app settings.
 
-## Ingestion
+# Ingestion (Bronze Tier)
 
 Note: to use mocked data, change the function application settings `YNAB_BASE_ENDPOINT` to `https://<functionName>.azurewebsites.net/api/mocks/`. This load static files from the function itself that should demonstrate the pipeline
 
-### Source
+## Source
 
 the [YNAB API](https://api.ynab.com/v1) provides all of the necessary endpoints to get data from. Below are the specific endpoints currently used.
 
-#### Get Transactions
+### Get Transactions
 
 **Specification:** [Get Transactions](https://api.ynab.com/v1#/Transactions/getTransactions)
 
@@ -77,7 +77,7 @@ the [YNAB API](https://api.ynab.com/v1) provides all of the necessary endpoints 
 **Durability:** Replaced daily  
 **Storage Type:** Raw payload  
 **Storage Location:** `ynab/raw/transactions.json`
-#### Get Accounts
+### Get Accounts
 
 **Specification:** [Get Accounts](https://api.ynab.com/v1#/Accounts/getAccounts)
 
@@ -88,7 +88,7 @@ the [YNAB API](https://api.ynab.com/v1) provides all of the necessary endpoints 
 **Storage Type:** Raw payload  
 **Storage Location:** `ynab/raw/accounts.json`
 
-#### Get Budget Month
+### Get Budget Month
 
 **Specification:** [Get Budget Month](https://api.ynab.com/v1#/Months/getBudgetMonth)
 
@@ -99,3 +99,88 @@ the [YNAB API](https://api.ynab.com/v1) provides all of the necessary endpoints 
 **Storage Type:** Raw payload  
 **Storage Location:** `ynab/raw/month/{BudgetMonth}/{RunDay}.json`
 
+# Transformation (Silver Tier)
+
+items in the same step happen in parallel.
+
+## (Step 1) un-nest sub transactions
+
+Azure Function Name: `unnest_subtransactions`
+
+The first step in the transformation process is to read transactions and run a few transformations to clean the raw payload into a more usable state. There are three things that happen in this step.
+
+*File Path*: `silver/transactions.snappy.parquet`
+
+*Schema:*
+
+| Field Name | Data Type |
+|------------|-----------|
+| id         | str       |
+| name       | str       |
+| type       | str       |
+| on_budget  | bool      |
+| closed     | bool      |
+| note       | str       |
+| balance    | float     |
+| cleared_balance | float |
+| uncleared_balance | float |
+| deleted    | bool      |
+
+### Hydrate Debt Account Interest and Escrow transactions
+
+Debt Accounts are a special account type in YNAB in that they calculate the current balance of the debt using information about the interest rate, escrow amount, and current balance. Because the balance is calculated, the interest and escrow transactions do not appear in the transactions list returned from the api. As such, we need to calculate these values and insert the transactions into the transaction list. The steps to calculate follow this algorithm.
+
+1. Find accounts with a `debt_interest_rate` present.
+1. Group all transactions by month and order ascending.
+1. Loop through the months and create transactions by applying interest and escrow to that month.
+
+Notes:
+* interest is stored as Annual Percentage Rate (APR), as such, when we are applying interest we need to divide by 12 to get the monthly interest rate.
+* escrow amounts may or may not be present on the debt account, as such, we check for presence before we try and apply.
+
+### Un-nest sub-transactions
+
+Sub transactions are splits on the primary transaction amount. We need to un-nest all sub-transactions and replace the parent transaction with the children so that the reporting matches how the money was spent, and not a ledger on how the transactions appear in the bank account
+
+### Remove unneeded fields
+
+after we un-nest the sub-transactions, we remove unnecessary fields and upload to blob storage (path: `silver/transactions.snappy.parquet`) as a parquet file so that downstream jobs can process farther. We push it back to storage at this so that future steps can process the data in parallel.
+
+
+## (Step 1) Clean Accounts
+
+accounts are transformed into the schema defined below and uploaded to `silver/accounts.snappy.parquet`. miliunits are converted to float (2 decimal places)
+
+*File path:* `silver/accounts.snappy.parquet`
+*Schema:*
+| Field Name | Data Type |
+|------------|-----------|
+| id         | str       |
+| name       | str       |
+| type       | str       |
+| on_budget  | bool      |
+| closed     | bool      |
+| note       | str       |
+| balance    | float     |
+| cleared_balance | float |
+| uncleared_balance | float |
+| deleted    | bool      |
+
+## (Step 1) Clean Previous Month Categories
+
+previous budget month categories are transformed into the schema defined below and uploaded to `silver/budget_months/{month}.snappy.parquet`. Miliunits are converted to float (2 decimal places), categories are unnested and have month and snapshot date appended to each category.
+
+*File path:* `silver/budget_months/{month}.snappy.parquet`
+*Schema:*
+| Field Name | Data Type |
+|------------|-----------|
+| id         | str       |
+| month      | datetime64[ns] |
+| snapshot_date | datetime64[ns] |
+| category_group_id | str |
+| category_group_name | str |
+| name       | str       |
+| hidden     | bool      |
+| budgeted   | bool      |
+| activity   | bool      |
+| balance    | bool      |

@@ -22,23 +22,99 @@ def transform_transactions(connect_str: str) -> int:
         connect_str, "bronze/accounts.json")["data"]["accounts"]
 
     # transform transaction json
-    transactions_df = pd.DataFrame(
-        _transform_transactions(raw_transactions, accounts))
+    transactions = _transform_transactions(raw_transactions, accounts)
 
-    # save transformed transaction as parquet
-    # Convert the DataFrame to a PyArrow table
-    table = pa.Table.from_pandas(transactions_df)
-
-    # Write the table to a buffer as a Parquet file
-    buffer = pa.BufferOutputStream()
-    pq.write_table(table, buffer)
-    parquet_bytes = buffer.getvalue().to_pybytes()
-
+    # Define the transaction schema
+    schema = {
+        "id": str,
+        "date": "datetime64[ns]",
+        "amount": float,
+        "memo": str,
+        "cleared": str,
+        "approved": bool,
+        "flag_color": str,
+        "account_id": str,
+        "account_name": str,
+        "payee_id": str,
+        "payee_name": str,
+        "category_id": str,
+        "category_name": str,
+        "transfer_account_id": str,
+        "transfer_transaction_id": str,
+        "debt_transaction_type": str
+    }
     blob_name = "silver/transactions.snappy.parquet"
-    return _upload_blob(connect_str, blob_name, parquet_bytes)
+    return _upload_blob(connect_str, blob_name, transactions, schema)
 
 
-def _download_blob(connect_str: str, blob_name: str,) -> dict:
+def transform_accounts(connect_str: str) -> int:
+    """ Transforms accounts from the ynab api and saves to blob storage
+
+          :param str conn_str:
+              A connection string to an Azure Storage account.
+    """
+
+    # fetch raw transaction json
+    raw_accounts = _download_blob(
+        connect_str, "bronze/accounts.json")["data"]["accounts"]
+
+    # transform transaction json
+    accounts = map(_clean_account, raw_accounts)
+
+    # Define the schema as a dictionary
+    schema = {
+        "id": str,
+        "name": str,
+        "type": str,
+        "on_budget": bool,
+        "closed": bool,
+        "note": str,
+        "balance": float,
+        "cleared_balance": float,
+        "uncleared_balance": float,
+        "deleted": bool
+    }
+
+    blob_name = "silver/accounts.snappy.parquet"
+    return _upload_blob(connect_str, blob_name, accounts, schema)
+
+
+def transform_budget_month(connect_str: str, month: str) -> int:
+    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+
+    container_service = blob_service_client.get_container_client(
+        container="ynab")
+
+    # Get a list of blobs in the folder
+    blobs = container_service.list_blobs(
+        name_starts_with=f"bronze/month/{month}/")
+
+    months = []
+    for blob in blobs:
+        print(blob.name)
+        snapshot_date = blob.name.split("/")[-1].replace(".json", "")
+        print(f"snapshot_date: {snapshot_date}")
+        raw_month = _download_blob(connect_str, blob.name)["data"]["month"]
+        months.extend(_clean_budget_month(raw_month, snapshot_date))
+
+    schema = {
+        "id": str,
+        "month": "datetime64[ns]",
+        "snapshot_date": "datetime64[ns]",
+        "category_group_id": str,
+        "category_group_name": str,
+        "name": str,
+        "hidden": bool,
+        "budgeted": bool,
+        "activity": bool,
+        "balance": bool,
+    }
+
+    blob_name = f"silver/budget_months/{month}.snappy.parquet"
+    return _upload_blob(connect_str, blob_name, months, schema)
+
+
+def _download_blob(connect_str: str, blob_name: str) -> dict:
     # Create the BlobServiceClient object
     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
 
@@ -55,7 +131,17 @@ def _download_blob(connect_str: str, blob_name: str,) -> dict:
     return json_data
 
 
-def _upload_blob(connect_str: str, blob_name: str, data: bytes) -> int:
+def _upload_blob(connect_str: str, blob_name: str, data: Iterable[dict], schema: dict) -> int:
+
+    # save data as parquet using pyarrow
+    df = pd.DataFrame(data, columns=schema.keys()).astype(schema)
+    table = pa.Table.from_pandas(df)
+
+    # Write the table to a buffer as a Parquet file
+    buffer = pa.BufferOutputStream()
+    pq.write_table(table, buffer)
+    data = buffer.getvalue().to_pybytes()
+
     # Create the BlobServiceClient object which will be used to create a container client
     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
     blob_client = blob_service_client.get_blob_client(
@@ -119,9 +205,8 @@ def _clean_transaction(transaction: dict) -> dict:
     return {
         "id": transaction["id"],
         "date": transaction["date"],
-        # there is issues with converting to a decimal at this point, so we drop the extra zero
-        # and convert to decimal in a later step. Future work allow for the decimal floating point
-        # to be dynamically determined from the /budgets/{budgetId}/settings endpoint
+        # Future work allow for the decimal floating point to be dynamically determined
+        # from the /budgets/{budgetId}/settings endpoint
         "amount": round(transaction["amount"] / 1000, 2),
         "memo": transaction["memo"],
         "cleared": transaction["cleared"],
@@ -240,7 +325,7 @@ def _create_escrow_transaction(row: pd.Series, account: dict) -> dict:
     }
 
 
-def _fetch_value_from_date(json_obj: dict, date: pd.Timestamp) -> str:
+def _fetch_value_from_date(json_obj: dict, date: pd.Timestamp) -> int:
 
     sorted_items = sorted(json_obj.items(), key=lambda x: x[0], reverse=True)
 
@@ -249,4 +334,44 @@ def _fetch_value_from_date(json_obj: dict, date: pd.Timestamp) -> str:
         if pd.to_datetime(key) <= date:
             return value
 
-    return sorted_items[0][1]
+    return 0
+
+
+def _clean_account(account: dict) -> dict:
+    return {
+        "id": account["id"],
+        "name": account["name"],
+        "type": account["type"],
+        "on_budget": account["on_budget"],
+        "closed": account["closed"],
+        "note": account["note"],
+        # Future work allow for the decimal floating point to be dynamically determined
+        # from the /budgets/{budgetId}/settings endpoint
+        "balance": round(account["balance"] / 1000, 2),
+        "cleared_balance": round(account["cleared_balance"] / 1000, 2),
+        "uncleared_balance": round(account["uncleared_balance"] / 1000, 2),
+        "deleted": account["deleted"],
+    }
+
+
+def _clean_budget_month(budget_month: dict, snapshot_date: str) -> Generator[dict, None, None]:
+
+    for raw_category in budget_month["categories"]:
+        category = _clean_category(raw_category)
+
+        category["month"] = budget_month["month"]
+        category["snapshot_date"] = snapshot_date
+        yield category
+
+
+def _clean_category(category: dict) -> dict:
+    return {
+        "id": category["id"],
+        "category_group_id": category["category_group_id"],
+        "category_group_name": category["category_group_name"],
+        "name": category["name"],
+        "hidden": category["hidden"],
+        "budgeted": round(category["budgeted"] / 1000, 2),
+        "activity": round(category["activity"] / 1000, 2),
+        "balance": round(category["balance"] / 1000, 2),
+    }
