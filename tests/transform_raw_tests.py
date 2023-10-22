@@ -1,9 +1,14 @@
+import sys
 from typing import Generator
 import unittest
 import pandas as pd
-import src.transformation.transform_raw as transform
 import json
 import os
+
+# Add the directory containing the modules to the `PYTHONPATH`
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+
+import src.transformation.transform_raw as transform
 
 # Get the path of the current file
 current_file_path = os.path.dirname(__file__)

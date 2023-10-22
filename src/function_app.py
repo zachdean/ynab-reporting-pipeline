@@ -1,10 +1,13 @@
-import datetime
+from datetime import datetime
 import logging
 import azure.functions as func
 import azure.durable_functions as df
 import os
 import ingestion.ingest as ingest
 import transformation.transform_raw as transform_raw
+import serve.serve_category_scd as serve_category_scd
+import serve.serve_monthly_net_worth as serve_monthly_net_worth
+import serve.serve_transactions_star_schema as serve_transaction_star_schema
 
 app = df.DFApp()
 connect_str = os.getenv('AzureWebJobsStorage')
@@ -40,6 +43,23 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext) -> None:
         context.call_activity('transform_accounts'),
         context.call_activity('transform_previous_budget_month'),
         context.call_activity('transform_current_budget_month'),
+    ]
+
+    yield context.task_all(tasks)
+
+    # Gold
+    tasks = [
+        # catagories SCD
+        context.call_activity('serve_category_scd_activity'),
+
+        # transaction star schema
+        context.call_activity('create_transactions_fact_activity'),
+        context.call_activity('serve_category_dim_activity'),
+        context.call_activity('serve_accounts_dim_activity'),
+        context.call_activity('serve_payee_dim_activity'),
+
+        # monthly net worth helper fact table
+        context.call_activity('serve_net_worth_fact_activity')
     ]
 
     yield context.task_all(tasks)
@@ -155,3 +175,43 @@ def transform_current_budget_month(input):
     return transform_raw.transform_budget_month(connect_str, first_day_of_month)
 
 # endregion
+
+# region Gold
+
+# region Transaction Star Schema
+
+@app.activity_trigger(input_name="input")
+def create_transactions_fact_activity(input):
+    connect_str = os.getenv('AzureWebJobsStorage')
+    return serve_transaction_star_schema.create_transactions_fact(connect_str)
+
+@app.activity_trigger(input_name="input")
+def serve_category_dim_activity(input):
+    connect_str = os.getenv('AzureWebJobsStorage')
+    return serve_transaction_star_schema.create_category_dim(connect_str)
+
+@app.activity_trigger(input_name="input")
+def serve_accounts_dim_activity(input):
+    connect_str = os.getenv('AzureWebJobsStorage')
+    return serve_transaction_star_schema.create_accounts_dim(connect_str)
+
+@app.activity_trigger(input_name="input")
+def serve_payee_dim_activity(input):
+    connect_str = os.getenv('AzureWebJobsStorage')
+    return serve_transaction_star_schema.create_payee_dim(connect_str)
+
+# endregion Transaction Star Schema
+
+# region Views
+@app.activity_trigger(input_name="input")
+def serve_net_worth_fact_activity(input):
+    connect_str = os.getenv('AzureWebJobsStorage')
+    return serve_monthly_net_worth.create_net_worth_fact(connect_str)
+
+@app.activity_trigger(input_name="input")
+def serve_category_scd_activity(input):
+    connect_str = os.getenv('AzureWebJobsStorage')
+    return serve_category_scd.create_category_scd(connect_str)
+# endregion Views
+
+# endregion Gold

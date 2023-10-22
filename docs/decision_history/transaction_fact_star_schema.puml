@@ -1,0 +1,96 @@
+@startuml
+!theme cyborg
+hide circle
+skinparam linetype ortho
+
+enum AccountType {
+    checking
+    savings
+    cash
+    creditCard
+    lineOfCredit
+    otherAsset
+    otherLiability
+    mortgage
+    autoLoan
+    studentLoan
+    personalLoan
+    medicalDebt
+    otherDebt
+}
+
+enum AssetType {
+  Asset
+  Liability
+}
+
+enum DebtTransactionType {
+  payment
+  refund
+  fee
+  interest
+  escrow
+  balanceAdjustment
+  credit
+  charge
+}
+
+entity "category_dim" as cat_dim #line:black;back:lightgrey {
+  id : uuid <<unique>>
+  --
+  name: string
+  category_group_id : uuid
+  category_group_name : string
+  hidden: boolean
+}
+
+entity "account_dim" as account_dim #line:black;back:lightgrey {
+  id: uuid <<unique>>
+  --
+  name: string
+  type: AccountType
+  asset_type: AssetType
+  on_budget: boolean
+  closed: boolean
+  balance: number
+  cleared_balance: number
+  uncleared_balance: number
+  transfer_payee_id: string
+  last_reconciled_at: DateTime
+  debt_original_balance: number
+  deleted: boolean
+}
+
+entity "payee_dim" as payee_dim #line:black;back:lightgrey {
+  id : uuid <<unique>>
+  --
+  name: string
+}
+
+' unused fields are dropped from the model, if fields are used in a visualization they will be added back in 
+entity "transactions_fact" as transactions_fact #line:green;back:lightgreen {
+  id: string
+  --
+  date: string
+  amount: number
+  cleared: string
+  approved: boolean
+  account_id: string
+  payee_id: string
+  category_id: string
+  debt_transaction_type: DebtTransactionType or null
+}
+
+entity "net_worth_fact" as net_worth_fact #line:green;back:lightgreen {
+  date: string
+  delta: number
+  running_total: number
+  asset_type: string
+}
+
+cat_dim ||..o{ transactions_fact
+account_dim ||..o{ transactions_fact
+payee_dim ||..o{ transactions_fact
+net_worth_fact
+
+@enduml

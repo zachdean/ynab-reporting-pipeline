@@ -147,7 +147,7 @@ Sub transactions are splits on the primary transaction amount. We need to un-nes
 after we un-nest the sub-transactions, we remove unnecessary fields and upload to blob storage (path: `silver/transactions.snappy.parquet`) as a parquet file so that downstream jobs can process farther. We push it back to storage at this so that future steps can process the data in parallel.
 
 
-## (Step 1) Clean Accounts
+## Clean Accounts
 
 accounts are transformed into the schema defined below and uploaded to `silver/accounts.snappy.parquet`. miliunits are converted to float (2 decimal places)
 
@@ -166,7 +166,7 @@ accounts are transformed into the schema defined below and uploaded to `silver/a
 | uncleared_balance | float |
 | deleted    | bool      |
 
-## (Step 1) Clean Previous Month Categories
+## Clean Previous Month Categories
 
 previous budget month categories are transformed into the schema defined below and uploaded to `silver/budget_months/{month}.snappy.parquet`. Miliunits are converted to float (2 decimal places), categories are unnested and have month and snapshot date appended to each category.
 
@@ -184,3 +184,7 @@ previous budget month categories are transformed into the schema defined below a
 | budgeted   | bool      |
 | activity   | bool      |
 | balance    | bool      |
+
+# Gold
+
+TODO: add schema png, and item descriptions

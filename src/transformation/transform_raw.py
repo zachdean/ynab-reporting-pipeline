@@ -6,6 +6,7 @@ import pandas as pd
 import uuid
 import pyarrow as pa
 import pyarrow.parquet as pq
+import blob_helpers
 
 
 def transform_transactions(connect_str: str) -> int:
@@ -105,9 +106,9 @@ def transform_budget_month(connect_str: str, month: str) -> int:
         "category_group_name": str,
         "name": str,
         "hidden": bool,
-        "budgeted": bool,
-        "activity": bool,
-        "balance": bool,
+        "budgeted": float,
+        "activity": float,
+        "balance": float,
     }
 
     blob_name = f"silver/budget_months/{month}.snappy.parquet"
@@ -135,21 +136,7 @@ def _upload_blob(connect_str: str, blob_name: str, data: Iterable[dict], schema:
 
     # save data as parquet using pyarrow
     df = pd.DataFrame(data, columns=schema.keys()).astype(schema)
-    table = pa.Table.from_pandas(df)
-
-    # Write the table to a buffer as a Parquet file
-    buffer = pa.BufferOutputStream()
-    pq.write_table(table, buffer)
-    data = buffer.getvalue().to_pybytes()
-
-    # Create the BlobServiceClient object which will be used to create a container client
-    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-    blob_client = blob_service_client.get_blob_client(
-        container="ynab", blob=blob_name)
-    blob_client.upload_blob(data, overwrite=True)
-    byte_count = len(data)
-    logging.info(f"uploaded blob `{blob_name}` with {byte_count} bytes")
-    return byte_count
+    return blob_helpers.upload_parquet(connect_str, blob_name, df)
 
 
 def _transform_transactions(transactions: list[dict], accounts: list[dict]) -> Iterable[dict]:
