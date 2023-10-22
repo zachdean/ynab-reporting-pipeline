@@ -47,7 +47,7 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext) -> None:
 
     yield context.task_all(tasks)
 
-    # Gold
+    # ******Gold******
     tasks = [
         # catagories SCD
         context.call_activity('serve_category_scd_activity'),
