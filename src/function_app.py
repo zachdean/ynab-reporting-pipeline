@@ -37,33 +37,33 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext) -> None:
     logging.info('All files ingested')
 
     # ******Silver******
-
+    # TODO: this is not quite right yet, it is giving a non deterministic error
     # transform raw form into parquet files
-    tasks = [
-        context.call_activity('transform_transactions'),
-        context.call_activity('transform_accounts'),
-        context.call_activity('transform_previous_budget_month'),
-        context.call_activity('transform_current_budget_month'),
-    ]
+    # tasks = [
+    #     context.call_activity('transform_transactions'),
+    #     context.call_activity('transform_accounts'),
+    #     context.call_activity('transform_previous_budget_month'),
+    #     context.call_activity('transform_current_budget_month'),
+    # ]
 
-    yield context.task_all(tasks)
+    # yield context.task_all(tasks)
 
-    # ******Gold******
-    tasks = [
-        # catagories SCD
-        context.call_activity('serve_category_scd_activity'),
+    # # ******Gold******
+    # tasks = [
+    #     # catagories SCD
+    #     context.call_activity('serve_category_scd_activity'),
 
-        # transaction star schema
-        context.call_activity('create_transactions_fact_activity'),
-        context.call_activity('serve_category_dim_activity'),
-        context.call_activity('serve_accounts_dim_activity'),
-        context.call_activity('serve_payee_dim_activity'),
+    #     # transaction star schema
+    #     context.call_activity('create_transactions_fact_activity'),
+    #     context.call_activity('serve_category_dim_activity'),
+    #     context.call_activity('serve_accounts_dim_activity'),
+    #     context.call_activity('serve_payee_dim_activity'),
 
-        # monthly net worth helper fact table
-        context.call_activity('serve_net_worth_fact_activity')
-    ]
+    #     # monthly net worth helper fact table
+    #     context.call_activity('serve_net_worth_fact_activity')
+    # ]
 
-    yield context.task_all(tasks)
+    # yield context.task_all(tasks)
 
 # region orchestrator triggers
 
