@@ -1,6 +1,6 @@
 targetScope='subscription'
 
-param resourceGroupName string = 'YnabDataPipeline-rg'
+param resourceGroupName string = 'ynabdatapipeline'
 param resourceGroupLocation string = 'southcentralus'
 
 @secure()

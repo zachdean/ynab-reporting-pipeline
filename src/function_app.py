@@ -24,11 +24,12 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext) -> None:
         first_retry_interval_in_milliseconds, max_number_of_attempts)
 
     # auto retry api calls in the event of a transient failure of the YNAB api
+    # TODO: retry is not working as expected. Look into it more
     tasks = [
-        context.call_activity('load_transactions', retry_options),
-        context.call_activity('load_accounts', retry_options),
-        context.call_activity('load_current_budget_month', retry_options),
-        context.call_activity('load_previous_budget_month', retry_options)
+        context.call_activity('load_transactions'),
+        context.call_activity('load_accounts'),
+        context.call_activity('load_current_budget_month'),
+        context.call_activity('load_previous_budget_month')
     ]
 
     yield context.task_all(tasks)
@@ -76,14 +77,6 @@ async def ynab_pipeline_orchestrator_trigger(timer: func.TimerRequest, client: d
     instance_id = await client.start_new('ynab_pipeline_orchestrator')
 
     logging.info(f"Started orchestration with ID = '{instance_id}'.")
-
-
-@app.durable_client_input(client_name="client")
-@app.route('orchestrators/ynab_pipeline_orchestrator', methods=['POST'])
-async def ynab_pipeline_orchestrator_http(req: func.HttpRequest, client: df.DurableOrchestrationClient) -> func.HttpResponse:
-    instance_id = await client.start_new('ynab_pipeline_orchestrator')
-    response = client.create_check_status_response(req, instance_id)
-    return response
 
 #  endregion
 
