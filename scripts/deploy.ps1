@@ -16,3 +16,5 @@ Set-Location src
 
 # Publish the function app
 func azure functionapp publish $functionAppName --resource-group $resourceGroupName
+
+Set-Location ..
