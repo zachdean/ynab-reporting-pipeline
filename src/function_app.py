@@ -1,7 +1,9 @@
 from datetime import datetime
 import logging
+from typing import Generator
 import azure.functions as func
 import azure.durable_functions as df
+from azure.durable_functions.models.Task import TaskBase
 import os
 import ingestion.ingest as ingest
 import transformation.transform_raw as transform_raw
@@ -14,7 +16,7 @@ connect_str = os.getenv('AzureWebJobsStorage')
 
 
 @app.orchestration_trigger(context_name="context")
-def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext) -> None:
+def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext) -> Generator[TaskBase, None, None]:
 
     # ******Bronze******
     first_retry_interval_in_milliseconds = 60000
@@ -22,48 +24,56 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext) -> None:
 
     retry_options = df.RetryOptions(
         first_retry_interval_in_milliseconds, max_number_of_attempts)
-
+    logging.info('ingestion start')
     # auto retry api calls in the event of a transient failure of the YNAB api
     # TODO: retry is not working as expected. Look into it more
-    tasks = [
+    bronze_tasks = [
         context.call_activity('load_transactions'),
         context.call_activity('load_accounts'),
-        context.call_activity('load_current_budget_month'),
-        context.call_activity('load_previous_budget_month')
+        context.call_activity('load_current_budget_month', context.current_utc_datetime.strftime("%Y-%m-%d")),
     ]
 
-    yield context.task_all(tasks)
+    if context.current_utc_datetime.day <= 15:
+        bronze_tasks.append(context.call_activity('load_previous_budget_month', context.current_utc_datetime.strftime("%Y-%m-%d")))
+
+    # TODO: there seems to be a bug with the python sdk were the orchestrator fails with non-deterministic errors,
+    # but the activity functions still run. Need to look into it more.
+    yield context.task_all(bronze_tasks)
 
     logging.info('All files ingested')
 
     # ******Silver******
-    # TODO: this is not quite right yet, it is giving a non deterministic error
+    
     # transform raw form into parquet files
-    # tasks = [
-    #     context.call_activity('transform_transactions'),
-    #     context.call_activity('transform_accounts'),
-    #     context.call_activity('transform_previous_budget_month'),
-    #     context.call_activity('transform_current_budget_month'),
-    # ]
+    silver_tasks = [
+        context.call_activity('transform_transactions'),
+        context.call_activity('transform_accounts'),
+        context.call_activity('transform_previous_budget_month', context.current_utc_datetime.strftime("%Y-%m-01")),
+    ]
 
-    # yield context.task_all(tasks)
+    if context.current_utc_datetime.day <= 15:
+        silver_tasks.append(context.call_activity('transform_current_budget_month', context.current_utc_datetime.strftime("%Y-%m-01")))
+
+    yield context.task_all(silver_tasks)
+
+    logging.info('transform complete')
 
     # # ******Gold******
-    # tasks = [
-    #     # catagories SCD
-    #     context.call_activity('serve_category_scd_activity'),
+    gold_tasks = [
+        # catagories SCD
+        context.call_activity('serve_category_scd_activity'),
 
-    #     # transaction star schema
-    #     context.call_activity('create_transactions_fact_activity'),
-    #     context.call_activity('serve_category_dim_activity'),
-    #     context.call_activity('serve_accounts_dim_activity'),
-    #     context.call_activity('serve_payee_dim_activity'),
+        # transaction star schema
+        context.call_activity('create_transactions_fact_activity'),
+        context.call_activity('serve_category_dim_activity'),
+        context.call_activity('serve_accounts_dim_activity'),
+        context.call_activity('serve_payee_dim_activity'),
 
-    #     # monthly net worth helper fact table
-    #     context.call_activity('serve_net_worth_fact_activity')
-    # ]
+        # monthly net worth helper fact table
+        context.call_activity('serve_net_worth_fact_activity')
+    ]
 
-    # yield context.task_all(tasks)
+    yield context.task_all(gold_tasks)
 
 # region orchestrator triggers
 
@@ -121,15 +131,17 @@ def load_accounts(input):
 
 
 @app.activity_trigger(input_name="input")
-def load_current_budget_month(input):
+def load_current_budget_month(input: str):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return ingest.load_current_budget_month(connect_str)
+    date = datetime.strptime(input, '%Y-%m-%d')
+    return ingest.load_current_budget_month(connect_str, date)
 
 
 @app.activity_trigger(input_name="input")
-def load_previous_budget_month(input):
+def load_previous_budget_month(input: str):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return ingest.load_previous_budget_month(connect_str)
+    date = datetime.strptime(input, '%Y-%m-%d')
+    return ingest.load_previous_budget_month(connect_str, date)
 
 #  endregion
 
@@ -149,23 +161,15 @@ def transform_accounts(input):
 
 
 @app.activity_trigger(input_name="input")
-def transform_previous_budget_month(input):
+def transform_previous_budget_month(input: str):
     connect_str = os.getenv('AzureWebJobsStorage')
-    now = datetime.today()
-    if now.date > 15:
-        return
-
-    first_day_of_month = datetime(
-        now.year, now.month - 1, 1).strftime("%Y-%m-%d")
-    return transform_raw.transform_budget_month(connect_str, first_day_of_month)
+    return transform_raw.transform_budget_month(connect_str, input)
 
 
 @app.activity_trigger(input_name="input")
-def transform_current_budget_month(input):
+def transform_current_budget_month(input: str):
     connect_str = os.getenv('AzureWebJobsStorage')
-    now = datetime.today()
-    first_day_of_month = datetime(now.year, now.month, 1).strftime("%Y-%m-%d")
-    return transform_raw.transform_budget_month(connect_str, first_day_of_month)
+    return transform_raw.transform_budget_month(connect_str, input)
 
 # endregion
 

@@ -80,14 +80,13 @@ def load_accounts(connect_str: str) -> int:
     return _upload_blob(connect_str, blob_name, raw_json)
 
 
-def load_current_budget_month(connect_str: str) -> int:
+def load_current_budget_month(connect_str: str, current_date: datetime.datetime) -> int:
     """Loads current budget month from the ynab api and saves to blob storage
 
           :param str conn_str:
               A connection string to an Azure Storage account.
     """
 
-    current_date = datetime.date.today()
     first_day_of_month = datetime.date(
         current_date.year, current_date.month, 1).strftime("%Y-%m-%d")
     current_date_str = current_date.strftime("%Y-%m-%d")
@@ -101,19 +100,15 @@ def load_current_budget_month(connect_str: str) -> int:
     return _upload_blob(connect_str, blob_name, raw_json)
 
 
-def load_previous_budget_month(connect_str: str) -> int:
+def load_previous_budget_month(connect_str: str, current_date: datetime.datetime) -> int:
     """Loads the previous budget month from the ynab api and saves to blob storage
 
           :param str conn_str:
               A connection string to an Azure Storage account.
     """
 
-    # decide which month to load
-    current_date = datetime.date.today()
+    # load previous month
     month_offset = -1
-    if current_date.day > 15:
-        return
-
     first_day_of_month = datetime.date(
         current_date.year, current_date.month + month_offset, 1).strftime("%Y-%m-%d")
     current_date_str = current_date.strftime("%Y-%m-%d")
