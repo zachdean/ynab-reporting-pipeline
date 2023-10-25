@@ -35,6 +35,10 @@ def create_category_dim(connect_str: str):
 
     # Select the rows with the maximum `snapshot_date`
     df = df.loc[idx, keep_cols]
+    
+    df = df.reset_index(drop=True)
+
+    df = df.rename(columns={"id": "category_id"})
 
     blob_helpers.upload_parquet(
         connect_str, "gold/category_dim.snappy.parquet", df)
@@ -76,6 +80,9 @@ def create_accounts_dim(connect_str: str):
 
     drop_cols = set(df.columns) - set(keep_cols)
     df = df.drop(columns=drop_cols)
+    df = df.rename(columns={"id": "account_id"})
+
+    
 
     blob_helpers.upload_parquet(
         connect_str, "gold/accounts_dim.snappy.parquet", df)
@@ -87,7 +94,8 @@ def create_payee_dim(connect_str: str):
 
     df = df[["payee_id", "payee_name"]]\
         .drop_duplicates()\
-        .rename(columns={"payee_id": "id", "payee_name": "name"})
+        .rename(columns={"payee_name": "name"})\
+        .reset_index(drop=True)
 
     blob_helpers.upload_parquet(
         connect_str, "gold/payee_dim.snappy.parquet", df)

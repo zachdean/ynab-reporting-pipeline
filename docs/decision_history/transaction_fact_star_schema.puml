@@ -36,7 +36,7 @@ enum DebtTransactionType {
 }
 
 entity "category_dim" as cat_dim #line:black;back:lightgrey {
-  id : uuid <<unique>>
+  category_id : uuid <<unique>>
   --
   name: string
   category_group_id : uuid
@@ -45,7 +45,7 @@ entity "category_dim" as cat_dim #line:black;back:lightgrey {
 }
 
 entity "account_dim" as account_dim #line:black;back:lightgrey {
-  id: uuid <<unique>>
+  account_id: uuid <<unique>>
   --
   name: string
   type: AccountType
@@ -62,7 +62,7 @@ entity "account_dim" as account_dim #line:black;back:lightgrey {
 }
 
 entity "payee_dim" as payee_dim #line:black;back:lightgrey {
-  id : uuid <<unique>>
+  payee_id : uuid <<unique>>
   --
   name: string
 }

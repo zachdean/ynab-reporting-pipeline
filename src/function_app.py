@@ -16,7 +16,7 @@ connect_str = os.getenv('AzureWebJobsStorage')
 
 
 @app.orchestration_trigger(context_name="context")
-def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext) -> Generator[TaskBase, None, None]:
+def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext):
 
     # ******Bronze******
     first_retry_interval_in_milliseconds = 60000
@@ -26,15 +26,14 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext) -> Gener
         first_retry_interval_in_milliseconds, max_number_of_attempts)
     logging.info('ingestion start')
     # auto retry api calls in the event of a transient failure of the YNAB api
-    # TODO: retry is not working as expected. Look into it more
     bronze_tasks = [
-        context.call_activity('load_transactions'),
-        context.call_activity('load_accounts'),
-        context.call_activity('load_current_budget_month', context.current_utc_datetime.strftime("%Y-%m-%d")),
+        context.call_activity_with_retry('load_transactions', retry_options),
+        context.call_activity_with_retry('load_accounts', retry_options),
+        context.call_activity_with_retry('load_current_budget_month', retry_options, context.current_utc_datetime.strftime("%Y-%m-%d")),
     ]
 
     if context.current_utc_datetime.day <= 15:
-        bronze_tasks.append(context.call_activity('load_previous_budget_month', context.current_utc_datetime.strftime("%Y-%m-%d")))
+        bronze_tasks.append(context.call_activity_with_retry('load_previous_budget_month', retry_options, context.current_utc_datetime.strftime("%Y-%m-%d")))
 
     # TODO: there seems to be a bug with the python sdk were the orchestrator fails with non-deterministic errors,
     # but the activity functions still run. Need to look into it more.
@@ -48,11 +47,11 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext) -> Gener
     silver_tasks = [
         context.call_activity('transform_transactions'),
         context.call_activity('transform_accounts'),
-        context.call_activity('transform_previous_budget_month', context.current_utc_datetime.strftime("%Y-%m-01")),
+        context.call_activity('transform_current_budget_month', context.current_utc_datetime.strftime("%Y-%m-01")),
     ]
 
     if context.current_utc_datetime.day <= 15:
-        silver_tasks.append(context.call_activity('transform_current_budget_month', context.current_utc_datetime.strftime("%Y-%m-01")))
+        silver_tasks.append(context.call_activity('transform_previous_budget_month', context.current_utc_datetime.strftime("%Y-%m-01")))
 
     yield context.task_all(silver_tasks)
 
