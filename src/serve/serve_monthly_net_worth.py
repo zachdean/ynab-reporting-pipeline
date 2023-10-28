@@ -20,7 +20,7 @@ def _compute_monthly_net_worth(transactions_fact: pd.DataFrame, accounts_dim: pd
     transactions_fact["date"] = pd.to_datetime(transactions_fact["date"])
 
     # merge transactions_fact and accounts_dim DataFrames
-    df = pd.merge(transactions_fact, accounts_dim, how="left", left_on="account_id", right_on="id")
+    df = pd.merge(transactions_fact, accounts_dim, how="left", left_on="account_id", right_on="account_id")
 
     # group by month and asset type, and aggregate amount column
     net_worth_fact = df.groupby([pd.Grouper(key="date", freq="MS"), "asset_type"]).agg({"amount": "sum"}).reset_index()
