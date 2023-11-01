@@ -59,6 +59,11 @@ The YNAB Api token must be fetched from the YNAB application (see [quick start](
 
 After the values are collected, they need to be stored in the create Azure Key Vault. Deploy the infrastructure to get the values properly in KeyVault and app settings.
 
+
+## Power BI
+
+to get started with Power BI, open the FinancialSnapshot.xxxx template, set the storage account name, and use your Azure Credentials to authorize the storage account. 
+
 # Ingestion (Bronze Tier)
 
 Note: to use mocked data, change the function application settings `YNAB_BASE_ENDPOINT` to `https://<functionName>.azurewebsites.net/api/mocks/`. This load static files from the function itself that should demonstrate the pipeline
@@ -112,19 +117,25 @@ The first step in the transformation process is to read transactions and run a f
 *File Path*: `silver/transactions.snappy.parquet`
 
 *Schema:*
+| Key                    | Type          |
+|------------------------|---------------|
+| id                     | str           |
+| date                   | datetime64[ns]|
+| amount                 | number        |
+| memo                   | str           |
+| cleared                | str           |
+| approved               | boolean       |
+| flag_color             | str           |
+| account_id             | str           |
+| account_name           | str           |
+| payee_id               | str           |
+| payee_name             | str           |
+| category_id            | str           |
+| category_name          | str           |
+| transfer_account_id    | str           |
+| transfer_transaction_id| str           |
+| debt_transaction_type  | str           |
 
-| Field Name | Data Type |
-|------------|-----------|
-| id         | str       |
-| name       | str       |
-| type       | str       |
-| on_budget  | bool      |
-| closed     | bool      |
-| note       | str       |
-| balance    | float     |
-| cleared_balance | float |
-| uncleared_balance | float |
-| deleted    | bool      |
 
 ### Hydrate Debt Account Interest and Escrow transactions
 
@@ -171,6 +182,7 @@ accounts are transformed into the schema defined below and uploaded to `silver/a
 previous budget month categories are transformed into the schema defined below and uploaded to `silver/budget_months/{month}.snappy.parquet`. Miliunits are converted to float (2 decimal places), categories are unnested and have month and snapshot date appended to each category.
 
 *File path:* `silver/budget_months/{month}.snappy.parquet`
+
 *Schema:*
 | Field Name | Data Type |
 |------------|-----------|
@@ -187,4 +199,146 @@ previous budget month categories are transformed into the schema defined below a
 
 # Gold
 
-TODO: add schema png, and item descriptions
+This step creates the final tables that will be brought into Power BI. The final schema is as follows:
+
+![alt text](docs/star_schema_diagram.png "Reporting Diagram")
+
+## Steps:
+
+All steps run in parallel.
+
+### Transactions Fact
+
+Azure Function Name: `create_transactions_fact_activity`
+
+This step reads the cleaned transactions from `silver/transactions.snappy.parquet` and drops unneeded columns
+
+*File Path*: `gold/transactions_fact.snappy.parquet`
+
+*Schema:*
+
+| Key                    | Type    |
+|------------------------|---------|
+| id                     | str     |
+| date                   | str     |
+| amount                 | number  |
+| account_id             | str     |
+| payee_id               | str     |
+| category_id            | str     |
+| debt_transaction_type  | str     |
+
+<!-- TODO: move category_group_id to this table, doesn't make a difference in power bi, but I think it would be a little cleaner -->
+
+### Category Dim
+
+Azure Function Name: `serve_category_dim_activity`
+
+This step reads the latest budget month from `silver/budget_months/{month}.snappy.parquet` and drops unneeded columns. we pull from the latest month since that will have the latest changes (add/delete categories) allow us to properly hydrate the category dim
+
+*File Path*: `gold/categories_dim.snappy.parquet`
+
+*Schema:*
+
+| Field Name | Data Type |
+|------------|-----------|
+| category_id| str       |
+| category_group_id | str |
+| category_group_name | str |
+| name       | str       |
+| hidden     | bool      |
+
+
+### Accounts Dim
+
+Azure Function Name: `serve_accounts_dim_activity`
+
+This step reads from `silver/accounts.snappy.parquet` and drops unneeded columns. Also during this step, the account type is mapped to asset/liability based on ynab account type.
+
+*File Path*: `gold/accounts_dim.snappy.parquet`
+
+*Schema:*
+
+| Field Name | Data Type |
+|------------|-----------|
+| account_id | str       |
+| name       | str       |
+| type       | str       |
+| on_budget  | bool      |
+| closed     | bool      |
+| balance    | float     |
+| deleted    | bool      |
+| asset_type | str       |
+
+### Payee Dim
+
+Azure Function Name: `serve_payee_dim_activity`
+
+This step reads from `silver/transactions.snappy.parquet` and derives payees from actual spending.
+
+*File Path*: `gold/payee_dim.snappy.parquet`
+
+*Schema:*
+
+| Field Name | Data Type |
+|------------|-----------|
+| payee_id   | str       |
+| name       | str       |
+
+
+## Additional Tables
+
+### Category SCD
+
+Azure Function Name: `serve_category_scd_activity`
+
+This step reads all the budget months from `silver/budget_months/{month}.snappy.parquet` and creates a slowly changing dimension for category_name and budgeted_amount. 
+
+*File Path*: `gold/category_scd.snappy.parquet`
+
+*Schema:*
+
+| Field Name | Data Type |
+|------------|-----------|
+| id| str       |
+| name       | str       |
+| category_group_id | str |
+| category_group_name | str |
+| hidden     | bool      |
+| budgeted   | number    |
+| month      | datetime64[ns] |
+| start_date | datetime64[ns] |
+| end_date   | datetime64[ns] |
+
+### Age Of Money Fact
+
+Azure Function Name: `serve_age_of_money_activity`
+
+This step reads from `silver/transactions.snappy.parquet` and calculates the daily age of money based on the first in/first out method that YNAB uses to determine how long from when we receive money do we spend it. A good overview of this method is outlined in [this](https://www.reddit.com/r/ynab/comments/c5rw4b/how_is_age_of_money_calculated/es4dgni/) reddit post.
+
+*File Path*: `gold/age_of_money_fact.snappy.parquet`
+
+*Schema:*
+
+| Field Name   | Data Type      |
+|--------------|-----------     |
+| date         | datetime64[ns] |
+| age_of_money | str            |
+
+### Net Worth Fact
+
+Azure Function Name: `serve_net_worth_fact_activity`
+
+This step reads from `gold/transactions_fact.snappy.parquet` and `gold/accounts_dim.snappy.parquet` and calculates the monthly change in net worth. This table makes things quite a bit easier in power by instead of having to derive everything in power query
+
+*File Path*: `gold/monthly_net_worth_fact.snappy.parquet`
+
+*Schema:*
+
+| Field Name   | Data Type      | Notes                  |
+|--------------|----------------|------------------------|
+| date         | datetime64[ns] |                        |
+| delta        | number         |the change in net worth |
+| asset_type   | str            | asset/liability        |
+| liability_running_total | number | the running total of liabilities, only applicable on liability rows |
+| asset_running_total | number | the running total of asset, only applicable on asset rows |
+| running_total | number | the running total |

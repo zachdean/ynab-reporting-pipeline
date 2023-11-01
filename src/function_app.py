@@ -9,6 +9,7 @@ import ingestion.ingest as ingest
 import transformation.transform_raw as transform_raw
 import serve.serve_category_scd as serve_category_scd
 import serve.serve_monthly_net_worth as serve_monthly_net_worth
+import serve.serve_age_of_money as serve_age_of_money
 import serve.serve_transactions_star_schema as serve_transaction_star_schema
 
 app = df.DFApp()
@@ -68,11 +69,14 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext):
         context.call_activity('serve_accounts_dim_activity'),
         context.call_activity('serve_payee_dim_activity'),
 
-        # monthly net worth helper fact table
-        context.call_activity('serve_net_worth_fact_activity')
+        # helper fact tables
+        context.call_activity('serve_age_of_money_activity')
     ]
 
     yield context.task_all(gold_tasks)
+
+    # calculate net worth
+    yield context.call_activity('serve_net_worth_fact_activity')
 
 # region orchestrator triggers
 
@@ -208,6 +212,11 @@ def serve_net_worth_fact_activity(input):
 def serve_category_scd_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
     return serve_category_scd.create_category_scd(connect_str)
+
+@app.activity_trigger(input_name="input")
+def serve_age_of_money_activity(input):
+    connect_str = os.getenv('AzureWebJobsStorage')
+    return serve_age_of_money.create_age_of_money_fact(connect_str)
 # endregion Views
 
 # endregion Gold

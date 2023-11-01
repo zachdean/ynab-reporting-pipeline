@@ -88,9 +88,13 @@ entity "net_worth_fact" as net_worth_fact #line:green;back:lightgreen {
   asset_type: string
 }
 
+entity "age_of_money_fact" as age_of_money_fact #line:green;back:lightgreen {
+  date: string
+  age_of_money: int
+}
+
 cat_dim ||..o{ transactions_fact
 account_dim ||..o{ transactions_fact
 payee_dim ||..o{ transactions_fact
-net_worth_fact
 
 @enduml
