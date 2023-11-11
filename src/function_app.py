@@ -11,6 +11,7 @@ import serve.serve_category_scd as serve_category_scd
 import serve.serve_monthly_net_worth as serve_monthly_net_worth
 import serve.serve_age_of_money as serve_age_of_money
 import serve.serve_transactions_star_schema as serve_transaction_star_schema
+import validate.validate_accounts as validate_accounts
 
 app = df.DFApp()
 connect_str = os.getenv('AzureWebJobsStorage')
@@ -77,6 +78,16 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext):
 
     # calculate net worth
     yield context.call_activity('serve_net_worth_fact_activity')
+
+
+    # validate results
+    # TODO: there is a bug in the YNAB api so I cannot properly calculate the interest and escrow amounts for my mortgage account, commenting out for now since it will always fail
+    # validation_tasks = [
+    #     context.call_activity('validate_transactions_fact'),
+    #     context.call_activity('validate_net_worth_fact_activity'),
+    # ]
+
+    # yield context.task_all(validation_tasks)
 
 # region orchestrator triggers
 
@@ -220,3 +231,17 @@ def serve_age_of_money_activity(input):
 # endregion Views
 
 # endregion Gold
+
+# region Validation
+
+@app.activity_trigger(input_name="input")
+def validate_transactions_fact(input):
+    connect_str = os.getenv('AzureWebJobsStorage')
+    return validate_accounts.validate_transactions_fact(connect_str)
+
+@app.activity_trigger(input_name="input")
+def validate_net_worth_fact_activity(input):
+    connect_str = os.getenv('AzureWebJobsStorage')
+    return validate_accounts.validate_net_worth_fact(connect_str)
+
+# endregion Validation

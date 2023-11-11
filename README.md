@@ -342,3 +342,26 @@ This step reads from `gold/transactions_fact.snappy.parquet` and `gold/accounts_
 | liability_running_total | number | the running total of liabilities, only applicable on liability rows |
 | asset_running_total | number | the running total of asset, only applicable on asset rows |
 | running_total | number | the running total |
+
+
+# Validation
+
+the validation strategy is straight forward, the balance in accounts_dim represents the actual account balance in YNAB, as such we can use this balance to validate that our summations are correct.
+
+Note: I found a bug in YNAB's API that I am unable to properly hydrate the escrow amounts on my mortgage, this may or may not effect your data. If it does then this validation will fail. with manual correction, I am still off about two cents on the balance for the mortgage account, it is likely due to the fact that I have not properly reverse engineered there round logic. Future efforts will fix this, but the validation will also fail for that reason.
+
+## Validate Transactions Fact
+
+*inputs*
+* `gold/transactions_fact.snappy.parquet`
+* `gold/accounts_fact.snappy.parquet`
+
+*Validates* the balance of each account
+
+
+## Validate Net Worth Fact
+*inputs*
+* `gold/net_worth_fact.snappy.parquet`
+* `gold/accounts_fact.snappy.parquet`
+
+*Validates* the sum of account balance vs the sum of the delta in the net worth fact

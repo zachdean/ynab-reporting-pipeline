@@ -36,6 +36,12 @@ def _compute_monthly_net_worth(transactions_fact: pd.DataFrame, accounts_dim: pd
     # rename columns
     net_worth_fact = net_worth_fact.rename(columns={"amount": "delta"})
 
+    # round results to account for floating point errors, future work will make this configurable
+    net_worth_fact["delta"] = round(net_worth_fact["delta"], 2)
+    net_worth_fact["running_total"] = round(net_worth_fact["running_total"], 2)
+    net_worth_fact["asset_running_total"] = round(net_worth_fact["asset_running_total"], 2)
+    net_worth_fact["liability_running_total"] = round(net_worth_fact["liability_running_total"], 2)
+
     # order by date desc
     net_worth_fact = net_worth_fact.sort_values(["date", "asset_type"], ascending=[True, True]).reset_index(drop=True)
 
