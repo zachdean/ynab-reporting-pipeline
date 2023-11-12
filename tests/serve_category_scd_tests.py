@@ -6,7 +6,7 @@ import pandas as pd
 # Add the directory containing the modules to the `PYTHONPATH`
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
-from src.serve.serve_category_scd import _replace_max_with_none, _create_category_sdc
+from src.serve.serve_category_scd import _replace_max_with_none, _create_category_sdc, _create_category_variance
 
 class TestCreateCategorySDC(unittest.TestCase):
 
@@ -67,6 +67,30 @@ class TestReplaceMaxWithNone(unittest.TestCase):
         # Verify that the maximum `end_date` values were replaced with `None`
         pd.testing.assert_frame_equal(grouped_df, expected_df)
 
+class TestCreateCategoryVariance(unittest.TestCase):
+    def setUp(self):
+        self.df = pd.DataFrame({
+            "category_id": ['c1', 'c1', 'c2', 'c2'],
+            "name": ['cat1', 'cat1', 'cat2', 'cat2'],
+            "month": ['2022-01', '2022-01', '2022-02', '2022-02'],
+            "start_date": ['2022-01-01', '2022-01-02', '2022-02-01', '2022-02-02'],
+            "budgeted": [100, 200, 300, 400]
+        })
+
+    def test_create_category_variance(self):
+        # arrange
+        expected_df = pd.DataFrame({
+            "category_id": ['c1', 'c2'],
+            "name": ['cat1', 'cat2'],
+            "month": ['2022-01', '2022-02'],
+            "variance": [100, 100]
+        })
+
+        # act
+        actual_df = _create_category_variance(self.df)
+
+        # assert
+        pd.testing.assert_frame_equal(actual_df, expected_df)
 
 if __name__ == "__main__":
     unittest.main()
