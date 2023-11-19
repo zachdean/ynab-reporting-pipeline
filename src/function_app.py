@@ -63,6 +63,7 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext):
     gold_tasks = [
         # catagories SCD
         context.call_activity('serve_category_scd_activity'),
+        context.call_activity('serve_category_variance_activity'),
 
         # transaction star schema
         context.call_activity('create_transactions_fact_activity'),
@@ -107,21 +108,21 @@ async def ynab_pipeline_orchestrator_trigger(timer: func.TimerRequest, client: d
 # region stubbed data
 
 
-@app.route('mocks/budgets/{budgetId}/transactions', methods=['GET'])
+@app.route('mocks/budgets/{budgetId}/transactions', methods=['GET'], auth_level='anonymous')
 def transaction_mock_http(req: func.HttpRequest) -> func.HttpResponse:
     filename = 'static/transactions.json'
     with open(filename, 'rb') as f:
         return func.HttpResponse(f.read(), mimetype='application/json')
 
 
-@app.route('mocks/budgets/{budgetId}/accounts', methods=['GET'])
+@app.route('mocks/budgets/{budgetId}/accounts', methods=['GET'], auth_level='anonymous')
 def accounts_mock_http(req: func.HttpRequest) -> func.HttpResponse:
     filename = 'static/accounts.json'
     with open(filename, 'rb') as f:
         return func.HttpResponse(f.read(), mimetype='application/json')
 
 
-@app.route('mocks/budgets/{budgetId}/months/{month}', methods=['GET'])
+@app.route('mocks/budgets/{budgetId}/months/{month}', methods=['GET'], auth_level='anonymous')
 def month_mock_http(req: func.HttpRequest) -> func.HttpResponse:
     filename = 'static/month.json'
     with open(filename, 'rb') as f:
@@ -223,6 +224,11 @@ def serve_net_worth_fact_activity(input):
 def serve_category_scd_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
     return serve_category_scd.create_category_scd(connect_str)
+
+@app.activity_trigger(input_name="input")
+def serve_category_variance_activity(input):
+    connect_str = os.getenv('AzureWebJobsStorage')
+    return serve_category_scd.create_category_variance(connect_str)
 
 @app.activity_trigger(input_name="input")
 def serve_age_of_money_activity(input):

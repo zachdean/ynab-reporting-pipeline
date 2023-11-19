@@ -60,7 +60,6 @@ def _create_category_sdc(df: pd.DataFrame) -> pd.DataFrame:
     # Reset the index of the resulting DataFrame
     grouped_df = grouped_df.reset_index()
 
-    print(grouped_df)
     # Group the DataFrame by `month` and `id`, apply the custom function to each group,
     # and retain all of the other columns
     grouped_df = grouped_df.groupby(
