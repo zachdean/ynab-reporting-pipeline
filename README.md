@@ -62,7 +62,11 @@ After the values are collected, they need to be stored in the create Azure Key V
 
 ## Power BI
 
-to get started with Power BI, open the FinancialSnapshot.xxxx template, set the storage account name, and use your Azure Credentials to authorize the storage account. 
+Install [Power BI Desktop](https://learn.microsoft.com/en-us/power-bi/fundamentals/desktop-get-the-desktop)
+
+The power bi template located in the root of this repo (`./Financial Snapshot.pbit`) has several pre built reports ready to use, simply open, set the storage account name, and use your Azure Credentials to authorize the storage account.
+
+Note: if the Azure function has not run all the reports will be empty. You can trigger manually from the portal or wait for the time trigger to run.
 
 # Ingestion (Bronze Tier)
 
