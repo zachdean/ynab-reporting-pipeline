@@ -93,6 +93,13 @@ entity "age_of_money_fact" as age_of_money_fact #line:green;back:lightgreen {
   age_of_money: int
 }
 
+entity "category_variance_fact" as category_variance_fact #line:green;back:lightgreen {
+  category_id: string
+  name: string
+  month: date
+  variance: number
+}
+
 cat_dim ||..o{ transactions_fact
 account_dim ||..o{ transactions_fact
 payee_dim ||..o{ transactions_fact
