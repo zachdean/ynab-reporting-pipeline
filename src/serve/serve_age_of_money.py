@@ -1,10 +1,10 @@
-import logging
 import pandas as pd
 import blob_helpers
 import queue
 INCOME_CATEGORY = "Inflow: Ready to Assign"
 
-def create_age_of_money_fact(connect_str: str):
+
+def create_age_of_money_fact(connect_str: str) -> int:
     transactions_fact = blob_helpers.download_parquet(
         connect_str, "silver/transactions.snappy.parquet")
 
@@ -15,7 +15,7 @@ def create_age_of_money_fact(connect_str: str):
     age_of_money_fact = _compute_monthly_age_of_money(
         transactions_fact, accounts_dim)
 
-    blob_helpers.upload_parquet(connect_str, "gold/age_of_money_fact.snappy.parquet", age_of_money_fact)
+    return blob_helpers.upload_parquet(connect_str, "gold/age_of_money_fact.snappy.parquet", age_of_money_fact)
 
 
 def _compute_monthly_age_of_money(transactions_fact: pd.DataFrame, accounts_dim: pd.DataFrame) -> pd.DataFrame:

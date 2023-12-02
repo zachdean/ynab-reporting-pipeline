@@ -1,4 +1,4 @@
-@startuml
+@startuml YNAb table diagram
 !theme cyborg
 hide circle
 skinparam linetype ortho
@@ -98,6 +98,18 @@ entity "category_variance_fact" as category_variance_fact #line:green;back:light
   name: string
   month: date
   variance: number
+}
+
+entity "category_scd" as category_scd #line:green;back:lightgreen {
+  id: string
+  name: string
+  category_group_id: string
+  category_group_name: string
+  hidden: boolean
+  budgeted: number
+  month: date
+  start_date: date
+  end_date: date
 }
 
 cat_dim ||..o{ transactions_fact

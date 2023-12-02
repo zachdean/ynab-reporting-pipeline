@@ -1,11 +1,8 @@
 from typing import Generator, Iterable
 from azure.storage.blob import BlobServiceClient
-import logging
 import json
 import pandas as pd
 import uuid
-import pyarrow as pa
-import pyarrow.parquet as pq
 import blob_helpers
 
 

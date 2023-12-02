@@ -2,7 +2,7 @@ from datetime import datetime
 import blob_helpers
 
 
-def create_transactions_fact(connect_str: str):
+def create_transactions_fact(connect_str: str) -> int:
     # Define the list of column names that you want to keep
     keep_cols = ["id", "date", "amount", "account_id",
                  "payee_id", "category_id", "debt_transaction_type"]
@@ -14,11 +14,11 @@ def create_transactions_fact(connect_str: str):
     drop_cols = set(df.columns) - set(keep_cols)
     df = df.drop(columns=drop_cols)
 
-    blob_helpers.upload_parquet(
+    return blob_helpers.upload_parquet(
         connect_str, "gold/transactions_fact.snappy.parquet", df)
 
 
-def create_category_dim(connect_str: str):
+def create_category_dim(connect_str: str) -> int:
     # Define the list of column names that you want to keep
     keep_cols = ["id", "name", "category_group_id",
                  "category_group_name", "hidden"]
@@ -35,16 +35,16 @@ def create_category_dim(connect_str: str):
 
     # Select the rows with the maximum `snapshot_date`
     df = df.loc[idx, keep_cols]
-    
+
     df = df.reset_index(drop=True)
 
     df = df.rename(columns={"id": "category_id"})
 
-    blob_helpers.upload_parquet(
+    return blob_helpers.upload_parquet(
         connect_str, "gold/category_dim.snappy.parquet", df)
 
 
-def create_accounts_dim(connect_str: str):
+def create_accounts_dim(connect_str: str) -> int:
     # asset liability map
     asset_map = {
         'checking': 'asset',
@@ -82,13 +82,11 @@ def create_accounts_dim(connect_str: str):
     df = df.drop(columns=drop_cols)
     df = df.rename(columns={"id": "account_id"})
 
-    
-
-    blob_helpers.upload_parquet(
+    return blob_helpers.upload_parquet(
         connect_str, "gold/accounts_dim.snappy.parquet", df)
 
 
-def create_payee_dim(connect_str: str):
+def create_payee_dim(connect_str: str) -> int:
     df = blob_helpers.download_parquet(
         connect_str, "silver/transactions.snappy.parquet")
 
@@ -97,5 +95,5 @@ def create_payee_dim(connect_str: str):
         .rename(columns={"payee_name": "name"})\
         .reset_index(drop=True)
 
-    blob_helpers.upload_parquet(
+    return blob_helpers.upload_parquet(
         connect_str, "gold/payee_dim.snappy.parquet", df)

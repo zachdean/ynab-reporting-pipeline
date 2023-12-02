@@ -12,43 +12,6 @@ YNAB_BASE_ENDPOINT = os.getenv('YNAB_BASE_ENDPOINT')
 ENCODING = "utf-8"
 
 
-def _fetch_raw_json(endpoint: str) -> dict:
-
-    headers = {"Authorization": f"Bearer {YNAB_USER_TOKEN_KEY}"}
-    request_uri = os.path.join(
-        YNAB_BASE_ENDPOINT, "budgets", YNAB_BUDGET_ID, endpoint).replace('\\', '/')
-    api_response = requests.get(request_uri, headers=headers)
-
-    logging.info(
-        f"fetched data from {request_uri}, response: {api_response.status_code}")
-
-    if api_response.status_code != 200:
-        logging.error(
-            f"failed to fetch data, response code {api_response.status_code}")
-        logging.error(api_response.content.decode(ENCODING))
-        raise Exception("failed to fetch data")
-    return json.loads(api_response.content)
-
-
-def _upload_blob(connect_str: str, blob_name: str, raw_json: str) -> int:
-    # Compress the raw_json string
-    compressed_data = gzip.compress(raw_json.encode(ENCODING))
-
-    # Create the BlobServiceClient object which will be used to create a container client
-    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-    blob_client = blob_service_client.get_blob_client(
-        container="ynab", blob=blob_name)
-
-    # Upload the compressed data to the blob storage
-    blob_client.upload_blob(compressed_data, overwrite=True, timeout=60, content_settings=ContentSettings(
-        content_type="application/json", content_encoding="gzip"))
-
-    byte_count = len(compressed_data)
-    logging.info(
-        f"uploaded compressed blob `{blob_name}` with {byte_count} bytes")
-    return byte_count
-
-
 def load_transactions(connect_str: str) -> int:
     """Loads transactions from the ynab api and saves to blob storage
 
@@ -73,10 +36,10 @@ def load_accounts(connect_str: str) -> int:
 
     # fetch raw accounts json
     raw_json_obj = _fetch_raw_json("accounts")
+
     raw_json = json.dumps(raw_json_obj)
 
     blob_name = "bronze/accounts.json"
-
     return _upload_blob(connect_str, blob_name, raw_json)
 
 
@@ -120,3 +83,40 @@ def load_previous_budget_month(connect_str: str, current_date: datetime.datetime
 
     blob_name = f"bronze/month/{first_day_of_month}/{current_date_str}.json"
     return _upload_blob(connect_str, blob_name, raw_json)
+
+
+def _fetch_raw_json(endpoint: str) -> dict:
+
+    headers = {"Authorization": f"Bearer {YNAB_USER_TOKEN_KEY}"}
+    request_uri = os.path.join(
+        YNAB_BASE_ENDPOINT, "budgets", YNAB_BUDGET_ID, endpoint).replace('\\', '/')
+    api_response = requests.get(request_uri, headers=headers)
+
+    logging.info(
+        f"fetched data from {request_uri}, response: {api_response.status_code}")
+
+    if api_response.status_code != 200:
+        logging.error(
+            f"failed to fetch data, response code {api_response.status_code}")
+        logging.error(api_response.content.decode(ENCODING))
+        raise Exception("failed to fetch data")
+    return json.loads(api_response.content)
+
+
+def _upload_blob(connect_str: str, blob_name: str, raw_json: str) -> int:
+    # Compress the raw_json string
+    compressed_data = gzip.compress(raw_json.encode(ENCODING))
+
+    # Create the BlobServiceClient object which will be used to create a container client
+    blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+    blob_client = blob_service_client.get_blob_client(
+        container="ynab", blob=blob_name)
+
+    # Upload the compressed data to the blob storage
+    blob_client.upload_blob(compressed_data, overwrite=True, timeout=60, content_settings=ContentSettings(
+        content_type="application/json", content_encoding="gzip"))
+
+    byte_count = len(compressed_data)
+    logging.info(
+        f"uploaded compressed blob `{blob_name}` with {byte_count} bytes")
+    return byte_count

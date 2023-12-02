@@ -68,6 +68,13 @@ The power bi template located in the root of this repo (`./Financial Snapshot.pb
 
 Note: if the Azure function has not run all the reports will be empty. You can trigger manually from the portal or wait for the time trigger to run.
 
+## Local Development
+
+1. [Configure your environment](https://learn.microsoft.com/en-us/azure/azure-functions/create-first-function-vs-code-python?pivots=python-mode-decorators#configure-your-environment)
+1. open `./src` in vscode
+1. Configure a virtual env in `./src`, run `python -m venv .venv` in `./src`
+1. press F5 to run locally (ensure `local.settings.json` is configured before hand)
+
 # Ingestion (Bronze Tier)
 
 Note: to use mocked data, change the function application settings `YNAB_BASE_ENDPOINT` to `https://<functionName>.azurewebsites.net/api/mocks/`. This load static files from the function itself that should demonstrate the pipeline

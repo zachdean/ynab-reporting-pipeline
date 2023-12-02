@@ -1,9 +1,7 @@
 from datetime import datetime
 import logging
-from typing import Generator
 import azure.functions as func
 import azure.durable_functions as df
-from azure.durable_functions.models.Task import TaskBase
 import os
 import ingestion.ingest as ingest
 import transformation.transform_raw as transform_raw
@@ -29,31 +27,33 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext):
     logging.info('ingestion start')
     # auto retry api calls in the event of a transient failure of the YNAB api
     bronze_tasks = [
-        context.call_activity_with_retry('load_transactions', retry_options),
-        context.call_activity_with_retry('load_accounts', retry_options),
-        context.call_activity_with_retry('load_current_budget_month', retry_options, context.current_utc_datetime.strftime("%Y-%m-%d")),
+        context.call_activity_with_retry(load_transactions, retry_options),
+        context.call_activity_with_retry(load_accounts, retry_options),
+        context.call_activity_with_retry(
+            load_current_budget_month, retry_options, context.current_utc_datetime.strftime("%Y-%m-%d")),
     ]
 
     if context.current_utc_datetime.day <= 15:
-        bronze_tasks.append(context.call_activity_with_retry('load_previous_budget_month', retry_options, context.current_utc_datetime.strftime("%Y-%m-%d")))
+        bronze_tasks.append(context.call_activity_with_retry(
+            load_previous_budget_month, retry_options, context.current_utc_datetime.strftime("%Y-%m-%d")))
 
-    # TODO: there seems to be a bug with the python sdk were the orchestrator fails with non-deterministic errors,
-    # but the activity functions still run. Need to look into it more.
     yield context.task_all(bronze_tasks)
 
     logging.info('All files ingested')
 
     # ******Silver******
-    
+
     # transform raw form into parquet files
     silver_tasks = [
-        context.call_activity('transform_transactions'),
-        context.call_activity('transform_accounts'),
-        context.call_activity('transform_current_budget_month', context.current_utc_datetime.strftime("%Y-%m-01")),
+        context.call_activity(transform_transactions),
+        context.call_activity(transform_accounts),
+        context.call_activity(transform_current_budget_month,
+                              context.current_utc_datetime.strftime("%Y-%m-01")),
     ]
 
     if context.current_utc_datetime.day <= 15:
-        silver_tasks.append(context.call_activity('transform_previous_budget_month', context.current_utc_datetime.strftime("%Y-%m-01")))
+        silver_tasks.append(context.call_activity(
+            transform_previous_budget_month, context.current_utc_datetime.strftime("%Y-%m-01")))
 
     yield context.task_all(silver_tasks)
 
@@ -62,24 +62,28 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext):
     # # ******Gold******
     gold_tasks = [
         # catagories SCD
-        context.call_activity('serve_category_scd_activity'),
-        context.call_activity('serve_category_variance_activity'),
+        context.call_activity(serve_category_scd_activity),
 
         # transaction star schema
-        context.call_activity('create_transactions_fact_activity'),
-        context.call_activity('serve_category_dim_activity'),
-        context.call_activity('serve_accounts_dim_activity'),
-        context.call_activity('serve_payee_dim_activity'),
+        context.call_activity(create_transactions_fact_activity),
+        context.call_activity(serve_category_dim_activity),
+        context.call_activity(serve_accounts_dim_activity),
+        context.call_activity(serve_payee_dim_activity),
 
         # helper fact tables
-        context.call_activity('serve_age_of_money_activity')
+        context.call_activity(serve_age_of_money_activity)
     ]
 
     yield context.task_all(gold_tasks)
 
-    # calculate net worth
-    yield context.call_activity('serve_net_worth_fact_activity')
+    logging.info('gold complete')
 
+    additional_tasks = [
+        context.call_activity(serve_category_variance_activity),
+        context.call_activity(serve_net_worth_fact_activity)
+    ]
+    # calculate net worth
+    yield context.task_all(additional_tasks)
 
     # validate results
     # TODO: there is a bug in the YNAB api so I cannot properly calculate the interest and escrow amounts for my mortgage account, commenting out for now since it will always fail
@@ -136,28 +140,38 @@ def month_mock_http(req: func.HttpRequest) -> func.HttpResponse:
 @app.activity_trigger(input_name="input")
 def load_transactions(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return ingest.load_transactions(connect_str)
+    upload_size = ingest.load_transactions(connect_str)
+    logging.info(f"load_transactions: Uploaded {upload_size} bytes")
+    return upload_size
 
 
 @app.activity_trigger(input_name="input")
 def load_accounts(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return ingest.load_accounts(connect_str)
+    # return ingest.load_accounts(connect_str)
+    upload_size = ingest.load_accounts(connect_str)
+    logging.info(f"load_accounts: Uploaded {upload_size} bytes")
+    return upload_size
 
 
 @app.activity_trigger(input_name="input")
 def load_current_budget_month(input: str):
     connect_str = os.getenv('AzureWebJobsStorage')
     date = datetime.strptime(input, '%Y-%m-%d')
-    return ingest.load_current_budget_month(connect_str, date)
+    # return ingest.load_current_budget_month(connect_str, date)
+    upload_size = ingest.load_current_budget_month(connect_str, date)
+    logging.info(f"load_current_budget_month: Uploaded {upload_size} bytes")
+    return upload_size
 
 
 @app.activity_trigger(input_name="input")
 def load_previous_budget_month(input: str):
     connect_str = os.getenv('AzureWebJobsStorage')
     date = datetime.strptime(input, '%Y-%m-%d')
-    return ingest.load_previous_budget_month(connect_str, date)
-
+    # return ingest.load_previous_budget_month(connect_str, date)
+    upload_size = ingest.load_previous_budget_month(connect_str, date)
+    logging.info(f"load_previous_budget_month: Uploaded {upload_size} bytes")
+    return upload_size
 #  endregion
 
 # region Silver
@@ -166,87 +180,136 @@ def load_previous_budget_month(input: str):
 @app.activity_trigger(input_name="input")
 def transform_transactions(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return transform_raw.transform_transactions(connect_str)
+    # return transform_raw.transform_transactions(connect_str)
+    upload_size = transform_raw.transform_transactions(connect_str)
+    logging.info(f"transform_transactions: Uploaded {upload_size} bytes")
+    return upload_size
 
 
 @app.activity_trigger(input_name="input")
 def transform_accounts(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return transform_raw.transform_accounts(connect_str)
+    # return transform_raw.transform_accounts(connect_str)
+    upload_size = transform_raw.transform_accounts(connect_str)
+    logging.info(f"transform_accounts: Uploaded {upload_size} bytes")
+    return upload_size
 
 
 @app.activity_trigger(input_name="input")
 def transform_previous_budget_month(input: str):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return transform_raw.transform_budget_month(connect_str, input)
+    # return transform_raw.transform_budget_month(connect_str, input)
+    upload_size = transform_raw.transform_budget_month(connect_str, input)
+    logging.info(f"transform_budget_month: Uploaded {upload_size} bytes")
+    return upload_size
 
 
 @app.activity_trigger(input_name="input")
 def transform_current_budget_month(input: str):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return transform_raw.transform_budget_month(connect_str, input)
-
+    # return transform_raw.transform_budget_month(connect_str, input)
+    upload_size = transform_raw.transform_budget_month(connect_str, input)
+    logging.info(f"transform_budget_month: Uploaded {upload_size} bytes")
+    return upload_size
 # endregion
 
 # region Gold
 
 # region Transaction Star Schema
 
+
 @app.activity_trigger(input_name="input")
 def create_transactions_fact_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return serve_transaction_star_schema.create_transactions_fact(connect_str)
+    # return serve_transaction_star_schema.create_transactions_fact(connect_str)
+    upload_size = serve_transaction_star_schema.create_transactions_fact(
+        connect_str)
+    logging.info(f"create_transactions_fact: Uploaded {upload_size} bytes")
+    return upload_size
+
 
 @app.activity_trigger(input_name="input")
 def serve_category_dim_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return serve_transaction_star_schema.create_category_dim(connect_str)
+    # return serve_transaction_star_schema.create_category_dim(connect_str)
+    upload_size = serve_transaction_star_schema.create_category_dim(
+        connect_str)
+    logging.info(f"create_category_dim: Uploaded {upload_size} bytes")
+    return upload_size
+
 
 @app.activity_trigger(input_name="input")
 def serve_accounts_dim_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return serve_transaction_star_schema.create_accounts_dim(connect_str)
+    # return serve_transaction_star_schema.create_accounts_dim(connect_str)
+    upload_size = serve_transaction_star_schema.create_accounts_dim(
+        connect_str)
+    logging.info(f"create_accounts_dim: Uploaded {upload_size} bytes")
+    return upload_size
+
 
 @app.activity_trigger(input_name="input")
 def serve_payee_dim_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return serve_transaction_star_schema.create_payee_dim(connect_str)
+    # return serve_transaction_star_schema.create_payee_dim(connect_str)
+    upload_size = serve_transaction_star_schema.create_payee_dim(connect_str)
+    logging.info(f"create_payee_dim: Uploaded {upload_size} bytes")
+    return upload_size
 
 # endregion Transaction Star Schema
 
 # region Views
+
+
 @app.activity_trigger(input_name="input")
 def serve_net_worth_fact_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return serve_monthly_net_worth.create_net_worth_fact(connect_str)
+    # return serve_monthly_net_worth.create_net_worth_fact(connect_str)
+    upload_size = serve_monthly_net_worth.create_net_worth_fact(connect_str)
+    logging.info(f"create_net_worth_fact: Uploaded {upload_size} bytes")
+    return upload_size
+
 
 @app.activity_trigger(input_name="input")
 def serve_category_scd_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return serve_category_scd.create_category_scd(connect_str)
+    # return serve_category_scd.create_category_scd(connect_str)
+    upload_size = serve_category_scd.create_category_scd(connect_str)
+    logging.info(f"create_category_scd: Uploaded {upload_size} bytes")
+    return upload_size
+
 
 @app.activity_trigger(input_name="input")
 def serve_category_variance_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return serve_category_scd.create_category_variance(connect_str)
+    # return serve_category_scd.create_category_variance(connect_str)
+    upload_size = serve_category_scd.create_category_variance(connect_str)
+    logging.info(f"create_category_variance: Uploaded {upload_size} bytes")
+    return upload_size
+
 
 @app.activity_trigger(input_name="input")
 def serve_age_of_money_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    return serve_age_of_money.create_age_of_money_fact(connect_str)
+    # return serve_age_of_money.create_age_of_money_fact(connect_str)
+    upload_size = serve_age_of_money.create_age_of_money_fact(connect_str)
+    logging.info(f"create_age_of_money_fact: Uploaded {upload_size} bytes")
+    return upload_size
 # endregion Views
 
 # endregion Gold
 
 # region Validation
 
+
 @app.activity_trigger(input_name="input")
-def validate_transactions_fact(input):
+def validate_transactions_fact(input) -> bool:
     connect_str = os.getenv('AzureWebJobsStorage')
     return validate_accounts.validate_transactions_fact(connect_str)
 
+
 @app.activity_trigger(input_name="input")
-def validate_net_worth_fact_activity(input):
+def validate_net_worth_fact_activity(input) -> bool:
     connect_str = os.getenv('AzureWebJobsStorage')
     return validate_accounts.validate_net_worth_fact(connect_str)
 

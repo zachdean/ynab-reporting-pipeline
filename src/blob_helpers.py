@@ -4,6 +4,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+
 def download_parquet(connect_str: str, blob_name: str) -> pd.DataFrame:
     # Create the BlobServiceClient object
     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
@@ -17,14 +18,9 @@ def download_parquet(connect_str: str, blob_name: str) -> pd.DataFrame:
     reader = pa.BufferReader(blob_data)
     table = pq.read_table(reader)
     df = table.to_pandas()
+    logging.info(f"downloaded blob `{blob_name}` with {len(blob_data)} bytes")
     return df
-    # table = pq.read_table(source=blob_data)
 
-    # # Convert the table to a Pandas DataFrame
-    # df = table.to_pandas()
-
-    # return df
-    # return pd.read_parquet(blob_data)
 
 def upload_parquet(connect_str: str, blob_name: str, df: pd.DataFrame) -> int:
 

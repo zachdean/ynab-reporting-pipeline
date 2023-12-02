@@ -4,7 +4,7 @@ import pandas as pd
 import blob_helpers
 
 
-def create_category_scd(connect_str: str):
+def create_category_scd(connect_str: str) -> int:
     df = pd.DataFrame()
 
     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
@@ -25,15 +25,17 @@ def create_category_scd(connect_str: str):
 
     scd_df = _create_category_sdc(df)
 
-    blob_helpers.upload_parquet(
+    return blob_helpers.upload_parquet(
         connect_str, "gold/category_scd.snappy.parquet", scd_df)
 
-def create_category_variance(connect_str: str):
-    df = blob_helpers.download_parquet(connect_str, "gold/category_scd.snappy.parquet")
+
+def create_category_variance(connect_str: str) -> int:
+    df = blob_helpers.download_parquet(
+        connect_str, "gold/category_scd.snappy.parquet")
 
     scd_df = _create_category_variance(df)
 
-    blob_helpers.upload_parquet(
+    return blob_helpers.upload_parquet(
         connect_str, "gold/category_variance_fact.snappy.parquet", scd_df)
 
 
@@ -51,7 +53,8 @@ def _create_category_sdc(df: pd.DataFrame) -> pd.DataFrame:
                           for col in grouped_df.columns.values]
 
     # rename columns
-    grouped_df = grouped_df.rename(columns={"snapshot_date_min": "start_date", "snapshot_date_max": "end_date"})
+    grouped_df = grouped_df.rename(
+        columns={"snapshot_date_min": "start_date", "snapshot_date_max": "end_date"})
     grouped_df = grouped_df.sort_values(by=["month", "start_date"])
 
     grouped_df["start_date"] = pd.to_datetime(grouped_df["start_date"])
