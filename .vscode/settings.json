@@ -6,6 +6,7 @@
   "azureFunctions.projectRuntime": "~4",
   "debug.internalConsoleOptions": "neverOpen",
   "azureFunctions.projectLanguageModel": 2,
+  "flake8.args": ["--max-complexity=10", "--max-line-length=127"],
   "[python]": {
     "editor.defaultFormatter": "ms-python.autopep8"
   },

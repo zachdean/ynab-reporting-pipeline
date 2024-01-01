@@ -1,17 +1,18 @@
 import sys
-from typing import Generator
 import unittest
 import pandas as pd
 import json
 import os
 
 # Add the directory containing the modules to the `PYTHONPATH`
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "src")))
 
-import src.transformation.transform_raw as transform
+import src.transformation.transform_raw as transform  # noqa:E402 (module level import not at top of file)
 
 # Get the path of the current file
 current_file_path = os.path.dirname(__file__)
+
 
 class SubTransactionsTestCase(unittest.TestCase):
 
@@ -66,7 +67,12 @@ class MortgageTransactionsTestCase(unittest.TestCase):
             transactions = json.load(f)
         with open(os.path.join(current_file_path, 'resources/accounts.json'), 'r', encoding='utf-8') as f:
             accounts = json.load(f)
-        with open(os.path.join(current_file_path, 'resources/expected_mortgage_transactions.json'), 'r', encoding='utf-8') as f:
+        with open(
+                os.path.join(current_file_path,
+                             'resources/expected_mortgage_transactions.json'),
+                'r',
+                encoding='utf-8'
+        ) as f:
             expected = json.load(f)
 
         # act
@@ -90,12 +96,30 @@ class MortgageTransactionsTestCase(unittest.TestCase):
 class TestEscrowAmountFromDate(unittest.TestCase):
     def setUp(self):
         # Arrange: Set up the account as a class field
-        self.account = {"id": "123", "name": "Test Account", "debt_escrow_amounts": {"2022-01-01": 100}}
+        self.account = {"id": "123", "name": "Test Account",
+                        "debt_escrow_amounts": {"2022-01-01": 100}}
 
     def test_create_escrow_transaction(self):
         # Arrange: Set up the row and expected keys
         row = pd.Series({"date": pd.Timestamp('2022-01-01')})
-        expected_keys = ["id", "date", "amount", "memo", "cleared", "approved", "flag_color", "account_id", "account_name", "payee_id", "payee_name", "category_id", "category_name", "transfer_account_id", "transfer_transaction_id", "debt_transaction_type", "subtransactions"]
+        expected_keys = [
+            "id",
+            "date",
+            "amount",
+            "memo",
+            "cleared",
+            "approved",
+            "flag_color",
+            "account_id",
+            "account_name",
+            "payee_id",
+            "payee_name",
+            "category_id",
+            "category_name",
+            "transfer_account_id",
+            "transfer_transaction_id",
+            "debt_transaction_type",
+            "subtransactions"]
 
         # Act: Call the _create_escrow_transaction() function with the row and account
         actual = transform._create_escrow_transaction(row, self.account)
@@ -130,16 +154,36 @@ class TestCreateInterestTransaction(unittest.TestCase):
 
     def setUp(self):
         # Arrange: Set up the account as a class field
-        self.account = {"id": "123", "name": "Test Account", "debt_interest_rates": {"2022-01-01": 50000}}
+        self.account = {"id": "123", "name": "Test Account",
+                        "debt_interest_rates": {"2022-01-01": 50000}}
 
     def test_create_interest_transaction(self):
         # Arrange: Set up the row and runningTotal, and expected keys
         row = pd.Series({"date": pd.Timestamp('2022-01-01')})
         runningTotal = 1000
-        expected_keys = ["id", "date", "amount", "memo", "cleared", "approved", "flag_color", "account_id", "account_name", "payee_id", "payee_name", "category_id", "category_name", "transfer_account_id", "transfer_transaction_id", "debt_transaction_type", "subtransactions"]
+        expected_keys = [
+            "id",
+            "date",
+            "amount",
+            "memo",
+            "cleared",
+            "approved",
+            "flag_color",
+            "account_id",
+            "account_name",
+            "payee_id",
+            "payee_name",
+            "category_id",
+            "category_name",
+            "transfer_account_id",
+            "transfer_transaction_id",
+            "debt_transaction_type",
+            "subtransactions"
+        ]
 
         # Act: Call the _create_interest_transaction() function with the row, runningTotal, and account
-        actual = transform._create_interest_transaction(row, runningTotal, self.account)
+        actual = transform._create_interest_transaction(
+            row, runningTotal, self.account)
 
         # Assert: Check that the actual dictionary has the expected keys
         self.assertEqual(list(actual.keys()), expected_keys)
@@ -151,7 +195,8 @@ class TestCreateInterestTransaction(unittest.TestCase):
         expected_amount = -41667
 
         # Act: Call the _create_interest_transaction() function with the row, runningTotal, and account
-        actual = transform._create_interest_transaction(row, runningTotal, self.account)
+        actual = transform._create_interest_transaction(
+            row, runningTotal, self.account)
 
         # Assert: Check that the actual amount matches the expected amount
         self.assertEqual(actual["amount"], expected_amount)
@@ -163,7 +208,8 @@ class TestCreateInterestTransaction(unittest.TestCase):
         expected_date = "2022-01-01"
 
         # Act: Call the _create_interest_transaction() function with the row, runningTotal, and account
-        actual = transform._create_interest_transaction(row, runningTotal, self.account)
+        actual = transform._create_interest_transaction(
+            row, runningTotal, self.account)
 
         # Assert: Check that the actual date matches the expected date
         self.assertEqual(actual["date"], expected_date)
@@ -173,7 +219,8 @@ class TestFetchValueFromDate(unittest.TestCase):
 
     def setUp(self):
         # class level set up
-        self.json_obj = {'2022-01-01': 100, '2022-02-01': 200, '2022-03-01': 300}
+        self.json_obj = {'2022-01-01': 100,
+                         '2022-02-01': 200, '2022-03-01': 300}
 
     def test_within_range(self):
         # Arrange: Set up the date and expected value
@@ -222,13 +269,25 @@ class TestFetchValueFromDate(unittest.TestCase):
 
 
 class TestCleanAccount(unittest.TestCase):
-    
+
     def setUp(self):
-        self.account = {"id": "123", "name": "Test Account", "type": "checking", "on_budget": True, "closed": False, "note": "Test note", "balance": 100000, "cleared_balance": 50000, "uncleared_balance": 70000, "deleted": False}
+        self.account = {
+            "id": "123",
+            "name": "Test Account",
+            "type": "checking",
+            "on_budget": True,
+            "closed": False,
+            "note": "Test note",
+            "balance": 100000,
+            "cleared_balance": 50000,
+            "uncleared_balance": 70000,
+            "deleted": False
+        }
 
     def test_clean_account(self):
         # Test case 1: Check that the function returns a dictionary with the correct keys
-        expected_keys = ["id", "name", "type", "on_budget", "closed", "note", "balance", "cleared_balance", "uncleared_balance", "deleted"]
+        expected_keys = ["id", "name", "type", "on_budget", "closed", "note",
+                         "balance", "cleared_balance", "uncleared_balance", "deleted"]
         actual = transform._clean_account(self.account)
         self.assertEqual(list(actual.keys()), expected_keys)
 
@@ -236,10 +295,10 @@ class TestCleanAccount(unittest.TestCase):
         # Test case 2: Check that the function returns a dictionary with the correct balance value
         # arrange
         expected_balance = 100.0
-        
+
         # act
         actual = transform._clean_account(self.account)
-        
+
         # assert
         self.assertEqual(actual["balance"], expected_balance)
 
@@ -247,10 +306,10 @@ class TestCleanAccount(unittest.TestCase):
         # Test case 3: Check that the function returns a dictionary with the correct cleared_balance value
         # arrange
         expected_cleared_balance = 50.0
-        
+
         # act
         actual = transform._clean_account(self.account)
-        
+
         # assert
         self.assertEqual(actual["cleared_balance"], expected_cleared_balance)
 
@@ -258,12 +317,13 @@ class TestCleanAccount(unittest.TestCase):
         # Test case 4: Check that the function returns a dictionary with the correct uncleared_balance value
         # arrange
         expected_uncleared_balance = 70.0
-        
+
         # act
         actual = transform._clean_account(self.account)
 
         # assert
-        self.assertEqual(actual["uncleared_balance"], expected_uncleared_balance)
+        self.assertEqual(actual["uncleared_balance"],
+                         expected_uncleared_balance)
 
 
 class TestCleanCategory(unittest.TestCase):
@@ -299,7 +359,8 @@ class TestCleanCategory(unittest.TestCase):
         result = transform._clean_category(category)
 
         # Assert
-        expected_keys = ["id", "category_group_id", "category_group_name", "name", "hidden", "budgeted", "activity", "balance"]
+        expected_keys = ["id", "category_group_id", "category_group_name",
+                         "name", "hidden", "budgeted", "activity", "balance"]
         self.assertCountEqual(result.keys(), expected_keys)
 
     def test_clean_category_returns_expected_values(self):
@@ -321,6 +382,7 @@ class TestCleanCategory(unittest.TestCase):
             "balance": 2.5,
         }
         self.assertDictEqual(result, expected_values)
+
 
 class TestCleanBudgetMonth(unittest.TestCase):
 
@@ -359,7 +421,8 @@ class TestCleanBudgetMonth(unittest.TestCase):
         snapshot_date = self.snapshot_date
 
         # Act
-        result = list(transform._clean_budget_month(budget_month, snapshot_date))
+        result = list(transform._clean_budget_month(
+            budget_month, snapshot_date))
 
         # Assert
         expected_number_of_categories = 2
@@ -371,7 +434,8 @@ class TestCleanBudgetMonth(unittest.TestCase):
         snapshot_date = self.snapshot_date
 
         # Act
-        result = list(transform._clean_budget_month(budget_month, snapshot_date))
+        result = list(transform._clean_budget_month(
+            budget_month, snapshot_date))
 
         # Assert
         expected_category_data = [
@@ -401,6 +465,7 @@ class TestCleanBudgetMonth(unittest.TestCase):
             },
         ]
         self.assertListEqual(result, expected_category_data)
+
 
 if __name__ == '__main__':
     unittest.main()

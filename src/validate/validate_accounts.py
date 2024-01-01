@@ -38,8 +38,9 @@ def _validate_transactions_fact(transactions_df: pd.DataFrame, accounts_df: pd.D
             if account_balance != round(transaction_balance, 3):
                 account_name = account["name"]
                 failed_count += 1
-                logging.warn(
-                    f"Account {account_name} has a balance of {account_balance} but a transaction balance of {transaction_balance}, with a difference of {account_balance - transaction_balance}")
+                logging.warning(
+                    f"Account {account_name} has a balance of {account_balance} but a transaction balance" +
+                    f" of {transaction_balance}, with a difference of {account_balance - transaction_balance}")
 
     if (failed_count == 0):
         logging.info("All accounts validated successfully")

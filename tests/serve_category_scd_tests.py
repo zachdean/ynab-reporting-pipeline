@@ -4,9 +4,14 @@ import unittest
 import pandas as pd
 
 # Add the directory containing the modules to the `PYTHONPATH`
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "src")))
 
-from src.serve.serve_category_scd import _replace_max_with_none, _create_category_sdc, _create_category_variance
+from src.serve.serve_category_scd import \
+    _replace_max_with_none, \
+    _create_category_sdc, \
+    _create_category_variance  # noqa:E402 (module level import not at top of file)
+
 
 class TestCreateCategorySDC(unittest.TestCase):
 
@@ -28,7 +33,7 @@ class TestCreateCategorySDC(unittest.TestCase):
         # Print out the resulting DataFrame and the expected DataFrame
         expected_df = pd.DataFrame({
             "month": ["2021-01", "2021-01", "2021-02", "2021-02"],
-            "id": ["A", "A", "B", "B"],
+            "category_id": ["A", "A", "B", "B"],
             "category_group_id": [1, 1, 2, 2],
             "name": ["Category 1", "Category 2", "Category 3", "Category 4"],
             "category_group_name": ["Group 1", "Group 1", "Group 2", "Group 2"],
@@ -67,6 +72,7 @@ class TestReplaceMaxWithNone(unittest.TestCase):
         # Verify that the maximum `end_date` values were replaced with `None`
         pd.testing.assert_frame_equal(grouped_df, expected_df)
 
+
 class TestCreateCategoryVariance(unittest.TestCase):
     def setUp(self):
         self.df = pd.DataFrame({
@@ -91,6 +97,7 @@ class TestCreateCategoryVariance(unittest.TestCase):
 
         # assert
         pd.testing.assert_frame_equal(actual_df, expected_df)
+
 
 if __name__ == "__main__":
     unittest.main()

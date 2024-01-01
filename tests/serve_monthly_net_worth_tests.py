@@ -5,10 +5,12 @@ import numpy as np
 import unittest
 
 # Add the directory containing the modules to the `PYTHONPATH`
+# TODO: figure out a better way to do this
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "src")))
 
-from src.serve.serve_monthly_net_worth import _compute_monthly_net_worth
+from src.serve.serve_monthly_net_worth import _compute_monthly_net_worth  # noqa:E402 (module level import not at top of file)
+
 
 class TestComputeMonthlyNetWorth(unittest.TestCase):
     def setUp(self):
@@ -19,7 +21,7 @@ class TestComputeMonthlyNetWorth(unittest.TestCase):
             "amount": [100, -50, 200, -75]
         })
         self.accounts_dim = pd.DataFrame({
-            "id": [1, 2],
+            "account_id": [1, 2],
             "asset_type": ["asset", "liability"]
         })
 
@@ -60,7 +62,7 @@ class TestComputeMonthlyNetWorth(unittest.TestCase):
 
         # assert
         self._assert_list_equal_with_nan(actual_asset_running_total,
-                             expected_asset_running_total)
+                                         expected_asset_running_total)
 
     def test_compute_monthly_net_worth_liability_running_total(self):
         # arrange
@@ -74,7 +76,7 @@ class TestComputeMonthlyNetWorth(unittest.TestCase):
 
         # assert
         self._assert_list_equal_with_nan(actual_liability_running_total,
-                             expected_liability_running_total)
+                                         expected_liability_running_total)
 
     def test_compute_monthly_net_worth_delta(self):
         # arrange
@@ -110,6 +112,7 @@ class TestComputeMonthlyNetWorth(unittest.TestCase):
                 continue
             if actual_list[i] != expected_list[i]:
                 self.fail(f"Expected: {expected_list}\nActual: {actual_list}")
+
 
 if __name__ == "__main__":
     unittest.main()

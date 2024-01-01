@@ -86,7 +86,8 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext):
     yield context.task_all(additional_tasks)
 
     # validate results
-    # TODO: there is a bug in the YNAB api so I cannot properly calculate the interest and escrow amounts for my mortgage account, commenting out for now since it will always fail
+    # TODO: there is a bug in the YNAB api so I cannot properly calculate the interest and escrow amounts
+    # for my mortgage account, commenting out for now since it will always fail
     # validation_tasks = [
     #     context.call_activity('validate_transactions_fact'),
     #     context.call_activity('validate_net_worth_fact_activity'),
