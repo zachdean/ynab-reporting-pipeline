@@ -110,31 +110,6 @@ async def ynab_pipeline_orchestrator_trigger(timer: func.TimerRequest, client: d
 
 #  endregion
 
-# region stubbed data
-
-
-@app.route('mocks/budgets/{budgetId}/transactions', methods=['GET'], auth_level='anonymous')
-def transaction_mock_http(req: func.HttpRequest) -> func.HttpResponse:
-    filename = 'static/transactions.json'
-    with open(filename, 'rb') as f:
-        return func.HttpResponse(f.read(), mimetype='application/json')
-
-
-@app.route('mocks/budgets/{budgetId}/accounts', methods=['GET'], auth_level='anonymous')
-def accounts_mock_http(req: func.HttpRequest) -> func.HttpResponse:
-    filename = 'static/accounts.json'
-    with open(filename, 'rb') as f:
-        return func.HttpResponse(f.read(), mimetype='application/json')
-
-
-@app.route('mocks/budgets/{budgetId}/months/{month}', methods=['GET'], auth_level='anonymous')
-def month_mock_http(req: func.HttpRequest) -> func.HttpResponse:
-    filename = 'static/month.json'
-    with open(filename, 'rb') as f:
-        return func.HttpResponse(f.read(), mimetype='application/json')
-
-# endregion
-
 # region Bronze
 
 
