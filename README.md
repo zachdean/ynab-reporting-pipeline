@@ -52,6 +52,15 @@ run `./script/deploy.ps1`
 
 Note: you may need to unblock powershell script execution on your machine, you can do it by running the following command `Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser`
 
+## manually invoking the function
+
+some times it is useful to manually invoke the pipeline, especially after initial deployment. The easiest way is is to invoke the script `scripts/invoke_pipeline.ps1`, to manually invoke, the following steps need to be followed.
+
+1. get you [master key](https://learn.microsoft.com/en-us/azure/azure-functions/functions-manually-run-non-http?tabs=azure-portal#get-the-master-key) and function name (should be in the form of `ynabDataPipeline<unique hash>`).
+1. using Postman, curl, or your favorite http request tool invoke POST `https://{functionName}.azurewebsites.net/runtime/webhooks/durabletask/orchestrators/ynab_pipeline_orchestrator?code={masterKey}`
+** `masterKey`: master key fetched from the Azure portal
+** `functionName`: the function name fetched from the portal
+
 ## YNAB Api User Token
 
 The YNAB Api token must be fetched from the YNAB application (see [quick start](https://api.ynab.com/)). After the token is fetched it must be added to the create Azure Key Vault. In addition, you must get the budget to the run the pipeline from the YNAB application url (`https://app.ynab.com/{Take this value}/budget/202310`, the value should like this `f2b1c1f9-5d5d-4e2d-8c6e-9c2b7d5c4d6e`, the full url would be `https://app.ynab.com/f2b1c1f9-5d5d-4e2d-8c6e-9c2b7d5c4d6e/budget/202310`).
