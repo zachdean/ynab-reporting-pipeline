@@ -26,7 +26,9 @@ Write-Host $functionAppName
 
 # # Send the POST request
 Write-Host "Invoking function https://$functionAppName.azurewebsites.net/runtime/webhooks/durabletask/orchestrators/ynab_pipeline_orchestrator?code=$masterKey"
-$response = Invoke-RestMethod -Uri "https://$functionAppName.azurewebsites.net/runtime/webhooks/durabletask/orchestrators/ynab_pipeline_orchestrator?code=$masterKey" -Method Post
+$response = Invoke-WebRequest -Uri "https://$functionAppName.azurewebsites.net/runtime/webhooks/durabletask/orchestrators/ynab_pipeline_orchestrator?code=$masterKey" -Method Post
 
 # # Print the response
-Write-Host $response
+$responseJson = $response.Content | ConvertFrom-Json
+$responsePrettyJson = $responseJson | ConvertTo-Json -Depth 10
+Write-Host $responsePrettyJson
