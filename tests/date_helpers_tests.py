@@ -7,7 +7,7 @@ from parameterized import parameterized
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "src")))
 
-from src.date_helpers import add_month  # noqa:E402 (module level import not at top of file)
+from date_helpers import add_month  # noqa:E402 (module level import not at top of file)
 
 
 class TestDateHelpers(unittest.TestCase):
