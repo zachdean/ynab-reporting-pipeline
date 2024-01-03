@@ -1,4 +1,5 @@
 from datetime import datetime
+from date_helpers import add_month
 import logging
 import azure.functions as func
 import azure.durable_functions as df
@@ -53,7 +54,7 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext):
 
     if context.current_utc_datetime.day <= 15:
         silver_tasks.append(context.call_activity(
-            transform_previous_budget_month, context.current_utc_datetime.strftime("%Y-%m-01")))
+            transform_previous_budget_month, add_month(context.current_utc_datetime, -1).strftime("%Y-%m-01")))
 
     yield context.task_all(silver_tasks)
 
@@ -134,7 +135,6 @@ def load_accounts(input):
 def load_current_budget_month(input: str):
     connect_str = os.getenv('AzureWebJobsStorage')
     date = datetime.strptime(input, '%Y-%m-%d')
-    # return ingest.load_current_budget_month(connect_str, date)
     upload_size = ingest.load_current_budget_month(connect_str, date)
     logging.info(f"load_current_budget_month: Uploaded {upload_size} bytes")
     return upload_size
@@ -144,7 +144,6 @@ def load_current_budget_month(input: str):
 def load_previous_budget_month(input: str):
     connect_str = os.getenv('AzureWebJobsStorage')
     date = datetime.strptime(input, '%Y-%m-%d')
-    # return ingest.load_previous_budget_month(connect_str, date)
     upload_size = ingest.load_previous_budget_month(connect_str, date)
     logging.info(f"load_previous_budget_month: Uploaded {upload_size} bytes")
     return upload_size
@@ -156,7 +155,6 @@ def load_previous_budget_month(input: str):
 @app.activity_trigger(input_name="input")
 def transform_transactions(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    # return transform_raw.transform_transactions(connect_str)
     upload_size = transform_raw.transform_transactions(connect_str)
     logging.info(f"transform_transactions: Uploaded {upload_size} bytes")
     return upload_size
@@ -165,7 +163,6 @@ def transform_transactions(input):
 @app.activity_trigger(input_name="input")
 def transform_accounts(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    # return transform_raw.transform_accounts(connect_str)
     upload_size = transform_raw.transform_accounts(connect_str)
     logging.info(f"transform_accounts: Uploaded {upload_size} bytes")
     return upload_size
@@ -174,7 +171,6 @@ def transform_accounts(input):
 @app.activity_trigger(input_name="input")
 def transform_previous_budget_month(input: str):
     connect_str = os.getenv('AzureWebJobsStorage')
-    # return transform_raw.transform_budget_month(connect_str, input)
     upload_size = transform_raw.transform_budget_month(connect_str, input)
     logging.info(f"transform_budget_month: Uploaded {upload_size} bytes")
     return upload_size
@@ -183,7 +179,6 @@ def transform_previous_budget_month(input: str):
 @app.activity_trigger(input_name="input")
 def transform_current_budget_month(input: str):
     connect_str = os.getenv('AzureWebJobsStorage')
-    # return transform_raw.transform_budget_month(connect_str, input)
     upload_size = transform_raw.transform_budget_month(connect_str, input)
     logging.info(f"transform_budget_month: Uploaded {upload_size} bytes")
     return upload_size
@@ -197,7 +192,6 @@ def transform_current_budget_month(input: str):
 @app.activity_trigger(input_name="input")
 def create_transactions_fact_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    # return serve_transaction_star_schema.create_transactions_fact(connect_str)
     upload_size = serve_transaction_star_schema.create_transactions_fact(
         connect_str)
     logging.info(f"create_transactions_fact: Uploaded {upload_size} bytes")
@@ -207,7 +201,6 @@ def create_transactions_fact_activity(input):
 @app.activity_trigger(input_name="input")
 def serve_category_dim_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    # return serve_transaction_star_schema.create_category_dim(connect_str)
     upload_size = serve_transaction_star_schema.create_category_dim(
         connect_str)
     logging.info(f"create_category_dim: Uploaded {upload_size} bytes")
@@ -217,7 +210,6 @@ def serve_category_dim_activity(input):
 @app.activity_trigger(input_name="input")
 def serve_accounts_dim_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    # return serve_transaction_star_schema.create_accounts_dim(connect_str)
     upload_size = serve_transaction_star_schema.create_accounts_dim(
         connect_str)
     logging.info(f"create_accounts_dim: Uploaded {upload_size} bytes")
@@ -227,7 +219,6 @@ def serve_accounts_dim_activity(input):
 @app.activity_trigger(input_name="input")
 def serve_payee_dim_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    # return serve_transaction_star_schema.create_payee_dim(connect_str)
     upload_size = serve_transaction_star_schema.create_payee_dim(connect_str)
     logging.info(f"create_payee_dim: Uploaded {upload_size} bytes")
     return upload_size
@@ -240,7 +231,6 @@ def serve_payee_dim_activity(input):
 @app.activity_trigger(input_name="input")
 def serve_net_worth_fact_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    # return serve_monthly_net_worth.create_net_worth_fact(connect_str)
     upload_size = serve_monthly_net_worth.create_net_worth_fact(connect_str)
     logging.info(f"create_net_worth_fact: Uploaded {upload_size} bytes")
     return upload_size
@@ -249,7 +239,6 @@ def serve_net_worth_fact_activity(input):
 @app.activity_trigger(input_name="input")
 def serve_category_scd_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    # return serve_category_scd.create_category_scd(connect_str)
     upload_size = serve_category_scd.create_category_scd(connect_str)
     logging.info(f"create_category_scd: Uploaded {upload_size} bytes")
     return upload_size
@@ -258,7 +247,6 @@ def serve_category_scd_activity(input):
 @app.activity_trigger(input_name="input")
 def serve_category_variance_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    # return serve_category_scd.create_category_variance(connect_str)
     upload_size = serve_category_scd.create_category_variance(connect_str)
     logging.info(f"create_category_variance: Uploaded {upload_size} bytes")
     return upload_size
@@ -267,7 +255,6 @@ def serve_category_variance_activity(input):
 @app.activity_trigger(input_name="input")
 def serve_age_of_money_activity(input):
     connect_str = os.getenv('AzureWebJobsStorage')
-    # return serve_age_of_money.create_age_of_money_fact(connect_str)
     upload_size = serve_age_of_money.create_age_of_money_fact(connect_str)
     logging.info(f"create_age_of_money_fact: Uploaded {upload_size} bytes")
     return upload_size
