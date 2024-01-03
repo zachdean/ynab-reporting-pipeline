@@ -1,4 +1,5 @@
 from azure.storage.blob import BlobServiceClient, ContentSettings
+from date_helpers import add_month
 import logging
 import json
 import datetime
@@ -50,8 +51,7 @@ def load_current_budget_month(connect_str: str, current_date: datetime.datetime)
               A connection string to an Azure Storage account.
     """
 
-    first_day_of_month = datetime.date(
-        current_date.year, current_date.month, 1).strftime("%Y-%m-%d")
+    first_day_of_month = current_date.strftime("%Y-%m-01")
     current_date_str = current_date.strftime("%Y-%m-%d")
 
     # fetch raw accounts json
@@ -72,8 +72,7 @@ def load_previous_budget_month(connect_str: str, current_date: datetime.datetime
 
     # load previous month
     month_offset = -1
-    first_day_of_month = datetime.date(
-        current_date.year, current_date.month + month_offset, 1).strftime("%Y-%m-%d")
+    first_day_of_month = add_month(current_date, month_offset).strftime("%Y-%m-01")
     current_date_str = current_date.strftime("%Y-%m-%d")
 
     # fetch raw budget month json
