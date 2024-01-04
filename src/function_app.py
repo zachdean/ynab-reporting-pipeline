@@ -69,22 +69,20 @@ def ynab_pipeline_orchestrator(context: df.DurableOrchestrationContext):
         context.call_activity(create_transactions_fact_activity),
         context.call_activity(serve_category_dim_activity),
         context.call_activity(serve_accounts_dim_activity),
-        context.call_activity(serve_payee_dim_activity),
-
-        # helper fact tables
-        context.call_activity(serve_age_of_money_activity)
+        context.call_activity(serve_payee_dim_activity)
     ]
 
     yield context.task_all(gold_tasks)
 
-    logging.info('gold complete')
-
     additional_tasks = [
         context.call_activity(serve_category_variance_activity),
-        context.call_activity(serve_net_worth_fact_activity)
+        context.call_activity(serve_net_worth_fact_activity),
+        context.call_activity(serve_age_of_money_activity)
     ]
     # calculate net worth
     yield context.task_all(additional_tasks)
+
+    logging.info('gold complete')
 
     # validate results
     # TODO: there is a bug in the YNAB api so I cannot properly calculate the interest and escrow amounts
