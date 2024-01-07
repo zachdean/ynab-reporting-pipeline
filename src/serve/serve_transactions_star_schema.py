@@ -1,5 +1,6 @@
 from datetime import datetime
 import blob_helpers
+import pandas as pd
 
 
 def create_transactions_fact(connect_str: str) -> int:
@@ -19,10 +20,6 @@ def create_transactions_fact(connect_str: str) -> int:
 
 
 def create_category_dim(connect_str: str) -> int:
-    # Define the list of column names that you want to keep
-    keep_cols = ["id", "name", "category_group_id",
-                 "category_group_name", "hidden"]
-
     # we could use the scd table, but we always know that the current month should be available allowing us to
     # process in parallel
     now = datetime.today()
@@ -30,15 +27,7 @@ def create_category_dim(connect_str: str) -> int:
     df = blob_helpers.download_parquet(
         connect_str, f"silver/budget_months/{month}.snappy.parquet")
 
-    # Group the DataFrame by the relevant columns and get the index of the row with the maximum `snapshot_date`
-    idx = df.groupby(keep_cols)["snapshot_date"].idxmax()
-
-    # Select the rows with the maximum `snapshot_date`
-    df = df.loc[idx, keep_cols]
-
-    df = df.reset_index(drop=True)
-
-    df = df.rename(columns={"id": "category_id"})
+    df = _create_category_dim(df)
 
     return blob_helpers.upload_parquet(
         connect_str, "gold/category_dim.snappy.parquet", df)
@@ -97,3 +86,21 @@ def create_payee_dim(connect_str: str) -> int:
 
     return blob_helpers.upload_parquet(
         connect_str, "gold/payee_dim.snappy.parquet", df)
+
+
+def _create_category_dim(df: pd.DataFrame) -> pd.DataFrame:
+    # Define the list of column names that you want to keep
+    keep_cols = ["id", "name", "category_group_id",
+                 "category_group_name", "hidden"]
+
+    # Group the DataFrame by the relevant columns and get the index of the row with the maximum `snapshot_date`
+    idx = df.groupby("id")["snapshot_date"].idxmax()
+
+    # Select the rows with the maximum `snapshot_date`
+    df = df.loc[idx, keep_cols]
+
+    df = df.reset_index(drop=True)
+
+    df = df.rename(columns={"id": "category_id"})
+
+    return df
